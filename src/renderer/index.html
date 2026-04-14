@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Clauditor</title>
+    <link rel="stylesheet" href="../../node_modules/xterm/css/xterm.css" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <aside id="sidebar">
+        <button id="new-session">+ New Session</button>
+        <ul id="session-list"></ul>
+      </aside>
+      <main id="main">
+        <header id="topbar">
+          <span id="cwd-label">No session</span>
+          <span id="state-pill" class="pill">—</span>
+          <button id="kill-btn" disabled>Kill</button>
+        </header>
+        <div id="terminal-container"></div>
+        <footer id="statusbar">
+          <span id="aggregate">0 sessions</span>
+        </footer>
+      </main>
+    </div>
+    <script src="../../node_modules/xterm/lib/xterm.js"></script>
+    <script src="../../node_modules/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+    <script src="../../node_modules/xterm-addon-web-links/lib/xterm-addon-web-links.js"></script>
+    <script src="renderer.js"></script>
+  </body>
+</html>
