@@ -20,10 +20,10 @@ test('spawned PTY emits banner and echoes writes', async () => {
   const session = mgr.spawn({ cwd: os.tmpdir(), cols: 80, rows: 24 });
 
   await waitFor(() => chunks.join('').includes('FAKE-CLAUDE READY'), 3000);
-  mgr.write(session.id, 'hello world\n');
+  mgr.write(session.id, 'hello world\r\n');
   await waitFor(() => chunks.join('').includes('ECHO: hello world'), 3000);
 
-  mgr.write(session.id, '__exit__\n');
+  mgr.write(session.id, '__exit__\r\n');
   await waitFor(() => mgr.list().length === 0, 3000);
 });
 
