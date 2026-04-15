@@ -287,7 +287,9 @@ if (window.__clauditorTestBridge?.enabled) {
       }
       return lines.join('\n');
     },
-    getSessions: () => Array.from(sessions.values()).map(({ term, fit, el, ...rest }) => rest),
+    getSessions: () => Array.from(sessions.values()).map((s) => ({
+      id: s.id, name: s.name, cwd: s.cwd, pid: s.pid, state: s.state,
+    })),
     getActiveId: () => activeId,
   };
 }
