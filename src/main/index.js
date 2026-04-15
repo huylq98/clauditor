@@ -27,6 +27,7 @@ function broadcast(channel, ...args) {
 }
 
 function createWindow() {
+  const isTest = process.env.CLAUDITOR_TEST === '1';
   mainWindow = new BrowserWindow({
     width: 1500,
     height: 900,
@@ -34,6 +35,7 @@ function createWindow() {
     minHeight: 500,
     title: 'Clauditor',
     backgroundColor: '#1e1e2e',
+    show: !isTest,
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'preload.js'),
       contextIsolation: true,
@@ -42,7 +44,7 @@ function createWindow() {
     },
   });
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
-  mainWindow.once('ready-to-show', () => mainWindow.maximize());
+  if (!isTest) mainWindow.once('ready-to-show', () => mainWindow.maximize());
   mainWindow.on('close', (e) => {
     if (!quitting) {
       e.preventDefault();

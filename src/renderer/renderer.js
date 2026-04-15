@@ -273,3 +273,21 @@ api.onNewSessionRequest(() => newBtn.click());
   for (const s of existing) ensureSession(s);
   if (existing[0]) selectSession(existing[0].id);
 })();
+
+if (window.__clauditorTestBridge?.enabled) {
+  window.__clauditorTest = {
+    getActiveTermBuffer: () => {
+      const s = sessions.get(activeId);
+      if (!s) return '';
+      const buf = s.term.buffer.active;
+      const lines = [];
+      for (let i = 0; i < buf.length; i++) {
+        const line = buf.getLine(i);
+        if (line) lines.push(line.translateToString(true));
+      }
+      return lines.join('\n');
+    },
+    getSessions: () => Array.from(sessions.values()).map(({ term, fit, el, ...rest }) => rest),
+    getActiveId: () => activeId,
+  };
+}
