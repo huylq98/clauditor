@@ -113,7 +113,11 @@ class PTYManager extends EventEmitter {
   }
 
   write(id, data) {
-    this.sessions.get(id)?.proc.write(data);
+    // Windows PTY requires CRLF; normalize bare LF so callers can use '\n' portably.
+    const normalized = os.platform() === 'win32'
+      ? data.replace(/(?<!\r)\n/g, '\r\n')
+      : data;
+    this.sessions.get(id)?.proc.write(normalized);
   }
 
   resize(id, cols, rows) {
