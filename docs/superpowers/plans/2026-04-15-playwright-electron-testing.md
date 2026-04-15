@@ -263,6 +263,8 @@ git commit -m "feat(pty): honor CLAUDITOR_CLI_OVERRIDE for tests"
 
 - [ ] **Step 1: Write the failing test**
 
+**Note on CRLF:** Tests write `\r\n` (not bare `\n`) because xterm.js sends `\r` for Enter in production, and Windows ConPTY + cmd.exe require `\r` to commit a line. The fake CLI strips trailing `\r` so both line endings parse correctly on the fake side, but only `\r\n` reliably triggers PTY line discipline on Windows.
+
 ```js
 const { test, expect } = require('@playwright/test');
 const path = require('path');
@@ -286,10 +288,10 @@ test('spawned PTY emits banner and echoes writes', async () => {
   const session = mgr.spawn({ cwd: os.tmpdir(), cols: 80, rows: 24 });
 
   await waitFor(() => chunks.join('').includes('FAKE-CLAUDE READY'), 3000);
-  mgr.write(session.id, 'hello world\n');
+  mgr.write(session.id, 'hello world\r\n');
   await waitFor(() => chunks.join('').includes('ECHO: hello world'), 3000);
 
-  mgr.write(session.id, '__exit__\n');
+  mgr.write(session.id, '__exit__\r\n');
   await waitFor(() => mgr.list().length === 0, 3000);
 });
 
@@ -324,6 +326,8 @@ git commit -m "test(pty): cover spawn, banner, write/echo, clean exit"
 
 - [ ] **Step 1: Write the failing test**
 
+**Note on CRLF:** Tests write `\r\n` (not bare `\n`) because xterm.js sends `\r` for Enter in production, and Windows ConPTY + cmd.exe require `\r` to commit a line. The fake CLI strips trailing `\r` so both line endings parse correctly on the fake side, but only `\r\n` reliably triggers PTY line discipline on Windows.
+
 ```js
 const { test, expect } = require('@playwright/test');
 const path = require('path');
@@ -345,7 +349,7 @@ test('buffer is capped at MAX_BUFFER (1 MiB)', async () => {
   const session = mgr.spawn({ cwd: os.tmpdir(), cols: 80, rows: 24 });
   // Trigger 5 large writes (256 KB each) → 1.25 MiB total
   await sleep(200);
-  for (let i = 0; i < 5; i++) mgr.write(session.id, '__big__\n');
+  for (let i = 0; i < 5; i++) mgr.write(session.id, '__big__\r\n');
   await sleep(500);
   expect(mgr.getBuffer(session.id).length).toBeLessThanOrEqual(1024 * 1024);
   mgr.kill(session.id);

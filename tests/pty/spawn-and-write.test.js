@@ -6,15 +6,22 @@ const FAKE = process.platform === 'win32'
   ? path.resolve(__dirname, '..', 'fixtures', 'fake-claude.cmd')
   : path.resolve(__dirname, '..', 'fixtures', 'fake-claude.js');
 
+let mgr = null;
+
 test.beforeEach(() => {
   process.env.CLAUDITOR_CLI_OVERRIDE = FAKE;
   delete require.cache[require.resolve('../../src/main/pty-manager.js')];
 });
-test.afterEach(() => { delete process.env.CLAUDITOR_CLI_OVERRIDE; });
+
+test.afterEach(() => {
+  try { mgr?.killAll(); } catch {}
+  mgr = null;
+  delete process.env.CLAUDITOR_CLI_OVERRIDE;
+});
 
 test('spawned PTY emits banner and echoes writes', async () => {
   const { PTYManager } = require('../../src/main/pty-manager.js');
-  const mgr = new PTYManager({ token: 't' });
+  mgr = new PTYManager({ token: 't' });
   const chunks = [];
   mgr.on('data', (_id, chunk) => chunks.push(chunk));
   const session = mgr.spawn({ cwd: os.tmpdir(), cols: 80, rows: 24 });
