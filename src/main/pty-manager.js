@@ -37,22 +37,28 @@ class PTYManager extends EventEmitter {
     this.token = token;
   }
 
-  spawn({ cwd, name }) {
+  spawn({ cwd, name, cols, rows }) {
     const id = uuid();
     const shell = resolveClaude();
+    const crypto = require('crypto');
     const env = {
       ...process.env,
       CLAUDITOR_SESSION_ID: id,
       CLAUDITOR_TOKEN: this.token,
       TERM: 'xterm-256color',
+      COLORTERM: 'truecolor',
+      TERM_PROGRAM: 'clauditor',
+      FORCE_COLOR: '3',
+      // Some TUIs use WT_SESSION as a "modern terminal" signal; supply a fake one.
+      WT_SESSION: crypto.randomUUID(),
     };
 
     let proc;
     try {
       proc = pty.spawn(shell, [], {
         name: 'xterm-256color',
-        cols: 120,
-        rows: 30,
+        cols: cols || 180,
+        rows: rows || 45,
         cwd,
         env,
       });

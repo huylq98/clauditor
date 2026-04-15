@@ -28,8 +28,10 @@ function broadcast(channel, ...args) {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 1500,
+    height: 900,
+    minWidth: 900,
+    minHeight: 500,
     title: 'Clauditor',
     backgroundColor: '#1e1e2e',
     webPreferences: {
@@ -40,6 +42,7 @@ function createWindow() {
     },
   });
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+  mainWindow.once('ready-to-show', () => mainWindow.maximize());
   mainWindow.on('close', (e) => {
     if (!quitting) {
       e.preventDefault();
@@ -65,7 +68,7 @@ async function bootstrap() {
   hookServer = new HookServer({ token: TOKEN, stateEngine });
   await hookServer.start();
 
-  settingsInstaller.install(TOKEN);
+  settingsInstaller.install();
 
   notifier = new Notifier({ onClick: focusSession });
 
@@ -103,7 +106,7 @@ ipcMain.handle('sessions:list', () => {
   return ptyManager.list().map((s) => ({ ...s, state: stateEngine.get(s.id) }));
 });
 
-ipcMain.handle('sessions:create', async (_e, { cwd, name } = {}) => {
+ipcMain.handle('sessions:create', async (_e, { cwd, name, cols, rows } = {}) => {
   let chosenCwd = cwd;
   if (!chosenCwd) {
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -114,7 +117,7 @@ ipcMain.handle('sessions:create', async (_e, { cwd, name } = {}) => {
     chosenCwd = result.filePaths[0];
   }
   try {
-    return ptyManager.spawn({ cwd: chosenCwd, name });
+    return ptyManager.spawn({ cwd: chosenCwd, name, cols, rows });
   } catch (err) {
     console.error('[clauditor] spawn failed:', err);
     dialog.showErrorBox('Failed to start Claude Code', err.message);

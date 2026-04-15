@@ -1,4 +1,4 @@
-/* global Terminal, FitAddon, WebLinksAddon */
+/* global Terminal, FitAddon, WebLinksAddon, WebglAddon */
 
 const api = window.clauditor;
 
@@ -15,17 +15,31 @@ const newBtn = document.getElementById('new-session');
 
 function createTerminal() {
   const term = new Terminal({
-    fontFamily: 'Menlo, Consolas, monospace',
+    fontFamily: '"Cascadia Code", "Cascadia Mono", "Consolas", "Menlo", monospace',
     fontSize: 13,
     theme: { background: '#11111b', foreground: '#cdd6f4', cursor: '#f5e0dc' },
     cursorBlink: true,
     scrollback: 10000,
     allowProposedApi: true,
+    smoothScrollDuration: 0,
+    macOptionIsMeta: true,
   });
   const fit = new FitAddon.FitAddon();
   term.loadAddon(fit);
   term.loadAddon(new WebLinksAddon.WebLinksAddon());
   return { term, fit };
+}
+
+function tryEnableWebgl(term) {
+  try {
+    const webgl = new WebglAddon.WebglAddon();
+    webgl.onContextLoss(() => webgl.dispose());
+    term.loadAddon(webgl);
+    return true;
+  } catch (e) {
+    console.warn('webgl renderer unavailable, falling back to DOM:', e);
+    return false;
+  }
 }
 
 function ensureSession(s) {
@@ -37,6 +51,7 @@ function ensureSession(s) {
   el.style.display = 'none';
   termContainer.appendChild(el);
   term.open(el);
+  tryEnableWebgl(term);
 
   term.onData((data) => api.write(s.id, data));
   term.onResize(({ cols, rows }) => api.resize(s.id, cols, rows));
@@ -62,7 +77,6 @@ async function selectSession(id) {
   }
   cwdLabel.textContent = s.cwd;
   updatePill(s.state);
-  killBtn.disabled = s.state === 'exited';
 
   if (!s.hydrated) {
     const buf = await api.getBuffer(id);
@@ -76,6 +90,15 @@ async function selectSession(id) {
 function updatePill(state) {
   statePill.className = `pill ${state || ''}`;
   statePill.textContent = state || '—';
+  if (state === 'exited') {
+    killBtn.textContent = 'Restart';
+    killBtn.disabled = false;
+    killBtn.classList.add('restart');
+  } else {
+    killBtn.textContent = 'Kill';
+    killBtn.disabled = !state;
+    killBtn.classList.remove('restart');
+  }
 }
 
 function renderList() {
@@ -108,15 +131,49 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+function probeDims() {
+  // Pre-create a hidden, sized terminal element to measure cols/rows
+  // for the about-to-spawn session.
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:absolute;visibility:hidden;width:100%;height:100%;';
+  termContainer.appendChild(probe);
+  const t = new Terminal({ fontFamily: '"Cascadia Code", "Consolas", monospace', fontSize: 13 });
+  const fit = new FitAddon.FitAddon();
+  t.loadAddon(fit);
+  t.open(probe);
+  let dims;
+  try { dims = fit.proposeDimensions(); } catch {}
+  t.dispose();
+  probe.remove();
+  return dims && dims.cols ? { cols: dims.cols, rows: dims.rows } : { cols: 180, rows: 45 };
+}
+
 newBtn.onclick = async () => {
-  const s = await api.createSession();
+  const { cols, rows } = probeDims();
+  const s = await api.createSession({ cols, rows });
   if (s) {
     const entry = ensureSession(s);
     selectSession(entry.id);
   }
 };
 
-killBtn.onclick = () => { if (activeId) api.killSession(activeId); };
+killBtn.onclick = async () => {
+  if (!activeId) return;
+  const s = sessions.get(activeId);
+  if (!s) return;
+  if (s.state === 'exited') {
+    const created = await api.createSession({ cwd: s.cwd, name: s.name });
+    if (created) {
+      const oldEntry = sessions.get(activeId);
+      if (oldEntry?.el) oldEntry.el.remove();
+      sessions.delete(activeId);
+      const entry = ensureSession(created);
+      selectSession(entry.id);
+    }
+  } else {
+    api.killSession(activeId);
+  }
+};
 
 function startRename(id, li) {
   const s = sessions.get(id);
@@ -144,10 +201,36 @@ function startRename(id, li) {
   input.onblur = () => commit(true);
 }
 
-window.addEventListener('resize', () => {
+const sidebarEl = document.getElementById('sidebar');
+const toggleBtn = document.getElementById('sidebar-toggle');
+const COLLAPSE_THRESHOLD = 1100;
+let userPinned = null; // null=auto, true=expanded, false=collapsed
+
+function applySidebarState() {
+  const wantCollapsed = userPinned === null
+    ? window.innerWidth < COLLAPSE_THRESHOLD
+    : !userPinned;
+  sidebarEl.classList.toggle('collapsed', wantCollapsed);
+  toggleBtn.textContent = wantCollapsed ? '»' : '«';
+}
+
+toggleBtn.onclick = () => {
+  userPinned = sidebarEl.classList.contains('collapsed');
+  applySidebarState();
+  refit();
+};
+
+function refit() {
   const s = sessions.get(activeId);
-  if (s) s.fit.fit();
+  if (s) requestAnimationFrame(() => s.fit.fit());
+}
+
+window.addEventListener('resize', () => {
+  applySidebarState();
+  refit();
 });
+
+applySidebarState();
 
 api.onCreated((s) => {
   const entry = ensureSession(s);
@@ -164,10 +247,7 @@ api.onState((id, state) => {
   if (!s) return;
   s.state = state;
   renderList();
-  if (id === activeId) {
-    updatePill(state);
-    killBtn.disabled = state === 'exited';
-  }
+  if (id === activeId) updatePill(state);
 });
 
 api.onExit((id) => {
@@ -175,7 +255,7 @@ api.onExit((id) => {
   if (!s) return;
   s.state = 'exited';
   renderList();
-  if (id === activeId) { updatePill('exited'); killBtn.disabled = true; }
+  if (id === activeId) updatePill('exited');
 });
 
 api.onRenamed((updated) => {

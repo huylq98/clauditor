@@ -4,16 +4,27 @@ html, body { margin: 0; height: 100%; font-family: -apple-system, Segoe UI, Robo
 #app { display: flex; height: 100vh; }
 
 #sidebar {
-  width: 260px;
+  width: 220px;
+  flex-shrink: 0;
   background: #181825;
   border-right: 1px solid #313244;
   display: flex;
   flex-direction: column;
   padding: 8px;
   gap: 8px;
+  transition: width 140ms ease;
+  position: relative;
+  z-index: 10;
+}
+
+#sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 #new-session {
+  flex: 1;
   background: #89b4fa;
   color: #1e1e2e;
   border: none;
@@ -21,8 +32,46 @@ html, body { margin: 0; height: 100%; font-family: -apple-system, Segoe UI, Robo
   font-weight: 600;
   border-radius: 6px;
   cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
 }
 #new-session:hover { background: #b4befe; }
+
+#sidebar-toggle {
+  background: transparent;
+  border: 1px solid #313244;
+  color: #cdd6f4;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1;
+}
+#sidebar-toggle:hover { background: #313244; }
+
+/* Collapsed (pinned narrow) */
+#sidebar.collapsed { width: 44px; padding: 6px 4px; }
+#sidebar.collapsed #new-session { font-size: 0; padding: 8px 0; }
+#sidebar.collapsed #new-session::before { content: '+'; font-size: 18px; }
+#sidebar.collapsed #sidebar-toggle { display: none; }
+#sidebar.collapsed .session-meta { display: none; }
+#sidebar.collapsed .session-item { justify-content: center; padding: 8px 4px; }
+
+/* Hover-expand when collapsed: float over content */
+#sidebar.collapsed:hover {
+  width: 220px;
+  padding: 8px;
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  box-shadow: 4px 0 14px rgba(0,0,0,0.5);
+}
+#sidebar.collapsed:hover #new-session { font-size: 14px; padding: 10px; }
+#sidebar.collapsed:hover #new-session::before { content: ''; }
+#sidebar.collapsed:hover #sidebar-toggle { display: block; }
+#sidebar.collapsed:hover .session-meta { display: flex; }
+#sidebar.collapsed:hover .session-item { justify-content: flex-start; padding: 10px; }
 
 #session-list {
   list-style: none;
@@ -110,6 +159,8 @@ html, body { margin: 0; height: 100%; font-family: -apple-system, Segoe UI, Robo
 }
 #kill-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 #kill-btn:not(:disabled):hover { background: #f38ba8; color: #1e1e2e; border-color: #f38ba8; }
+#kill-btn.restart { border-color: #a6e3a1; color: #a6e3a1; }
+#kill-btn.restart:hover { background: #a6e3a1; color: #1e1e2e; border-color: #a6e3a1; }
 
 #terminal-container {
   flex: 1;
