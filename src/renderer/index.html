@@ -23,19 +23,33 @@
           <span id="aggregate" class="meta-value">No sessions</span>
         </div>
       </header>
+
+      <nav id="tabbar">
+        <div id="tab-list" role="tablist"></div>
+        <button id="new-session" title="New session (Ctrl+T)">+ new</button>
+      </nav>
+
       <aside id="sidebar">
-        <div id="sidebar-header">
+        <div id="sidebar-search">
+          <span class="search-icon">⌕</span>
+          <input id="tree-filter" type="text" placeholder="filter files…" spellcheck="false" />
+        </div>
+        <div id="sidebar-tree">
           <div class="panel-heading">
             <span class="panel-eyebrow">&sect; 01</span>
-            <h2 class="panel-title">Sessions</h2>
+            <h2 class="panel-title">Files</h2>
           </div>
-          <button id="new-session" title="New Session">+ new</button>
+          <ul id="file-tree"></ul>
+          <div class="sidebar-empty" id="tree-empty">No session selected.</div>
         </div>
-        <ul id="session-list"></ul>
-        <div class="sidebar-footer">
-          <span class="footer-mark">— end —</span>
+        <div id="sidebar-activity" class="collapsed">
+          <button id="activity-toggle" aria-expanded="false">
+            <span>Activity</span><span class="activity-arrow">▸</span>
+          </button>
+          <ul id="activity-log"></ul>
         </div>
       </aside>
+
       <main id="main">
         <header id="topbar">
           <div class="topbar-left">
@@ -52,7 +66,7 @@
           <span class="status-dot-idle"></span>
           <span class="status-label">standby</span>
           <span class="status-sep">·</span>
-          <span class="status-hint">double-click a session to rename</span>
+          <span class="status-hint">Ctrl+1..9 switch tabs · Ctrl+T new · Ctrl+W close</span>
         </footer>
       </main>
     </div>
@@ -60,6 +74,9 @@
     <script src="../../node_modules/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
     <script src="../../node_modules/xterm-addon-web-links/lib/xterm-addon-web-links.js"></script>
     <script src="../../node_modules/xterm-addon-webgl/lib/xterm-addon-webgl.js"></script>
+    <script src="components/tree.js"></script>
+    <script src="components/tabbar.js"></script>
+    <script src="components/sidebar.js"></script>
     <script src="renderer.js"></script>
   </body>
 </html>
