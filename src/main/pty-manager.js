@@ -90,7 +90,8 @@ class PTYManager extends EventEmitter {
 
     proc.onExit(({ exitCode, signal }) => {
       this.emit('exit', id, exitCode, signal);
-      this.sessions.delete(id);
+      session.proc = null;
+      session.pid = null;
     });
 
     this.sessions.set(id, session);
@@ -145,6 +146,38 @@ class PTYManager extends EventEmitter {
     const s = this.sessions.get(id);
     if (!s || !s.proc) return;
     try { s.proc.kill(); } catch (e) {}
+  }
+
+  restart(id, { cols = 180, rows = 45 } = {}) {
+    const s = this.sessions.get(id);
+    if (!s) return null;
+    const shell = resolveClaude();
+    const crypto = require('crypto');
+    const env = {
+      ...process.env,
+      CLAUDITOR_SESSION_ID: s.id,
+      CLAUDITOR_TOKEN: this.token,
+      TERM: 'xterm-256color',
+      COLORTERM: 'truecolor',
+      TERM_PROGRAM: 'clauditor',
+      FORCE_COLOR: '3',
+      WT_SESSION: crypto.randomUUID(),
+    };
+    const proc = pty.spawn(shell, [], { name: 'xterm-256color', cols, rows, cwd: s.cwd, env });
+    s.proc = proc;
+    s.pid = proc.pid;
+    proc.onData((data) => {
+      s.buffer += data;
+      if (s.buffer.length > MAX_BUFFER) s.buffer = s.buffer.slice(-MAX_BUFFER);
+      this.emit('data', id, data);
+    });
+    proc.onExit(({ exitCode, signal }) => {
+      this.emit('exit', id, exitCode, signal);
+      s.proc = null;
+      s.pid = null;
+    });
+    this.emit('restart', this.describe(id));
+    return this.describe(id);
   }
 
   registerStub(record) {

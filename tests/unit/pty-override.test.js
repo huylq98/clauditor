@@ -38,3 +38,26 @@ test('registerStub creates entry with null proc; write/kill/resize are no-ops', 
   mgr.resize('stub-1', 80, 24);
   mgr.kill('stub-1');
 });
+
+test('restart spawns new proc, preserves id and buffer', () => {
+  const originalOverride = process.env.CLAUDITOR_CLI_OVERRIDE;
+  // Use a tiny shell so we don't need claude CLI installed for this test.
+  process.env.CLAUDITOR_CLI_OVERRIDE = process.platform === 'win32' ? 'cmd.exe' : '/bin/sh';
+  try {
+    const mgr = new PTYManager({ token: 't' });
+    mgr.registerStub({ id: 'stub-2', name: 'x', cwd: process.cwd(), createdAt: 1, buffer: 'prev output' });
+    const events = [];
+    mgr.on('restart', (desc) => events.push(desc));
+    mgr.restart('stub-2', { cols: 80, rows: 24 });
+    const s = mgr.sessions.get('stub-2');
+    expect(s.proc).not.toBe(null);
+    expect(s.pid).not.toBe(null);
+    expect(s.buffer).toBe('prev output'); // preserved
+    expect(events).toHaveLength(1);
+    expect(events[0].id).toBe('stub-2');
+    mgr.kill('stub-2');
+  } finally {
+    if (originalOverride === undefined) delete process.env.CLAUDITOR_CLI_OVERRIDE;
+    else process.env.CLAUDITOR_CLI_OVERRIDE = originalOverride;
+  }
+});
