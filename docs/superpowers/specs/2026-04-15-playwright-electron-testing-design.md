@@ -47,7 +47,7 @@ tests/
     real-claude-output.txt    # captured ANSI replay (optional)
   helpers/
     launch-app.js             # wraps _electron.launch with test env
-    xterm-read.js             # page.evaluate helpers to read xterm buffer
+    # xterm buffer reader lives in renderer.js as window.__clauditorTest.getActiveTermBuffer
 playwright.config.js
 ```
 
