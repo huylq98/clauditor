@@ -19,6 +19,7 @@ class TrayController {
     this.tray = null;
     this.sessions = [];
     this.states = {};
+    this._menuLabels = [];
   }
 
   start() {
@@ -54,13 +55,7 @@ class TrayController {
       { label: 'New Session', click: () => this.onNewSession?.() },
       { label: 'Quit', click: () => this.onQuit?.() },
     ]);
-    this._menuLabels = [
-      'Show Dashboard',
-      'Status: ' + urgent,
-      ...(sessionItems.length ? sessionItems.map(i => i.label) : ['No sessions']),
-      'New Session',
-      'Quit',
-    ];
+    this._menuLabels = menu.items.filter(i => i.type !== 'separator').map(i => i.label);
     this.tray.setContextMenu(menu);
   }
 
