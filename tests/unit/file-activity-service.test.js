@@ -36,6 +36,16 @@ test('post-tool-use Write promotes to modified and logs', () => {
   expect(snap.log[0]).toMatchObject({ kind: 'write', path: '/a.js' });
 });
 
+test('modified delta carries the tool kind', () => {
+  const { svc } = makeSvc(1000);
+  svc.register('s1');
+  const deltas = [];
+  svc.on('delta', (_sid, d) => deltas.push(d));
+  svc.handle({ sid: 's1', tool: 'Write', phase: 'post', path: '/a.js' });
+  const mod = deltas.find((d) => d.type === 'modified');
+  expect(mod).toMatchObject({ path: '/a.js', kind: 'write' });
+});
+
 test('touching auto-expires after ttl', () => {
   const { svc, clock } = makeSvc(1000);
   svc.register('s1');

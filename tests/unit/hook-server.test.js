@@ -130,3 +130,17 @@ test('ignores file-activity when ppid does not match', async () => {
   }, { 'X-Clauditor-Token': 'secret' });
   expect(events).toEqual([]);
 });
+
+test('emits file-activity for NotebookEdit with notebook_path', async () => {
+  engine.register('s1');
+  const events = [];
+  server.on('file-activity', (ev) => events.push(ev));
+  await post('/hook/post-tool-use', {
+    clauditor_ppid: 4242,
+    tool_name: 'NotebookEdit',
+    tool_input: { notebook_path: '/tmp/notes.ipynb' },
+  }, { 'X-Clauditor-Token': 'secret' });
+  expect(events).toEqual([{
+    sid: 's1', tool: 'NotebookEdit', phase: 'post', path: '/tmp/notes.ipynb',
+  }]);
+});

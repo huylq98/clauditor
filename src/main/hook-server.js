@@ -43,8 +43,10 @@ class HookServer extends EventEmitter {
   _maybeEmitActivity(sid, hookName, payload) {
     if (hookName !== 'pre-tool-use' && hookName !== 'post-tool-use') return;
     const tool = payload.tool_name;
-    const filePath = payload.tool_input?.file_path;
-    if (!tool || !ACTIVITY_TOOLS.has(tool) || typeof filePath !== 'string') return;
+    if (!tool || !ACTIVITY_TOOLS.has(tool)) return;
+    // NotebookEdit's payload uses notebook_path; other tools use file_path.
+    const filePath = payload.tool_input?.file_path ?? payload.tool_input?.notebook_path;
+    if (typeof filePath !== 'string') return;
     this.emit('file-activity', {
       sid, tool,
       phase: hookName === 'pre-tool-use' ? 'pre' : 'post',

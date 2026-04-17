@@ -62,7 +62,7 @@ class FileActivityService extends EventEmitter {
       s.modified.add(path);
     }
     this._pushLog(sid, { ts: this.now(), kind, path });
-    this.emit('delta', sid, { type: 'modified', path });
+    this.emit('delta', sid, { type: 'modified', path, kind });
     this.emit('delta', sid, { type: 'touching-end', path });
   }
 

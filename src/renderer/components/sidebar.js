@@ -143,7 +143,7 @@
     if (!st) return;
     if (d.type === 'touching-start') st.touching.add(d.path);
     else if (d.type === 'touching-end') st.touching.delete(d.path);
-    else if (d.type === 'modified') { st.modified.add(d.path); st.log.unshift({ ts: Date.now(), kind: 'edit', path: d.path }); }
+    else if (d.type === 'modified') { st.modified.add(d.path); st.log.unshift({ ts: Date.now(), kind: d.kind || 'edit', path: d.path }); }
     else if (d.type === 'created')  { st.created.add(d.path); st.modified.delete(d.path); }
     else if (d.type === 'deleted')  { st.modified.delete(d.path); st.created.delete(d.path); st.log.unshift({ ts: Date.now(), kind: 'delete', path: d.path }); }
     if (st.log.length > 20) st.log.length = 20;
