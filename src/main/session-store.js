@@ -67,6 +67,11 @@ class SessionStore {
     await fs.promises.rename(this.tmp, this.file);
   }
 
+  async remove(id) {
+    const records = this._snapshot().filter((r) => r.id !== id);
+    await this.saveNow(records);
+  }
+
   async _quarantine() {
     try { await fs.promises.rename(this.file, `${this.file}.corrupt`); } catch {}
   }

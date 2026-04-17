@@ -62,3 +62,18 @@ test('flushSync writes synchronously', async () => {
   const raw = fs.readFileSync(path.join(dir, 'sessions.json'), 'utf8');
   expect(JSON.parse(raw).sessions[0].id).toBe('y');
 });
+
+test('remove drops record and persists immediately', async () => {
+  const dir = tmpUserData();
+  const store = new SessionStore({ userDataDir: dir });
+  const records = [
+    { id: 'a', name: 'a', cwd: '/', createdAt: 1, buffer: '' },
+    { id: 'b', name: 'b', cwd: '/', createdAt: 2, buffer: '' },
+  ];
+  store.setSnapshot(() => records);
+  await store.saveNow(records);
+  await store.remove('a');
+  const raw = fs.readFileSync(path.join(dir, 'sessions.json'), 'utf8');
+  const parsed = JSON.parse(raw);
+  expect(parsed.sessions.map((r) => r.id)).toEqual(['b']);
+});
