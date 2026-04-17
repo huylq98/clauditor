@@ -81,3 +81,52 @@ test('health endpoint also requires token', async () => {
   });
   expect(res.status).toBe(403);
 });
+
+test('emits file-activity for pre-tool-use Edit with file_path', async () => {
+  engine.register('s1');
+  const events = [];
+  server.on('file-activity', (ev) => events.push(ev));
+  const res = await post('/hook/pre-tool-use', {
+    clauditor_ppid: 4242,
+    tool_name: 'Edit',
+    tool_input: { file_path: '/tmp/project/src/app.js' },
+  }, { 'X-Clauditor-Token': 'secret' });
+  expect(res.status).toBe(200);
+  expect(events).toEqual([{
+    sid: 's1', tool: 'Edit', phase: 'pre', path: '/tmp/project/src/app.js',
+  }]);
+});
+
+test('emits file-activity for post-tool-use Write', async () => {
+  engine.register('s1');
+  const events = [];
+  server.on('file-activity', (ev) => events.push(ev));
+  await post('/hook/post-tool-use', {
+    clauditor_ppid: 4242,
+    tool_name: 'Write',
+    tool_input: { file_path: '/tmp/x.js' },
+  }, { 'X-Clauditor-Token': 'secret' });
+  expect(events).toEqual([{
+    sid: 's1', tool: 'Write', phase: 'post', path: '/tmp/x.js',
+  }]);
+});
+
+test('ignores tools without file_path', async () => {
+  engine.register('s1');
+  const events = [];
+  server.on('file-activity', (ev) => events.push(ev));
+  await post('/hook/pre-tool-use', {
+    clauditor_ppid: 4242, tool_name: 'Bash', tool_input: { command: 'ls' },
+  }, { 'X-Clauditor-Token': 'secret' });
+  expect(events).toEqual([]);
+});
+
+test('ignores file-activity when ppid does not match', async () => {
+  engine.register('s1');
+  const events = [];
+  server.on('file-activity', (ev) => events.push(ev));
+  await post('/hook/pre-tool-use', {
+    clauditor_ppid: 9999, tool_name: 'Edit', tool_input: { file_path: '/x' },
+  }, { 'X-Clauditor-Token': 'secret' });
+  expect(events).toEqual([]);
+});

@@ -1,10 +1,13 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const { EventEmitter } = require('events');
 
 const PORT = 27182;
+const ACTIVITY_TOOLS = new Set(['Read', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
 
-class HookServer {
+class HookServer extends EventEmitter {
   constructor({ token, stateEngine, ptyManager }) {
+    super();
     this.token = token;
     this.stateEngine = stateEngine;
     this.ptyManager = ptyManager;
@@ -18,16 +21,14 @@ class HookServer {
       next();
     });
 
-    // Identify the owning Clauditor session by the hook process's parent PID
-    // (the Claude Code PID that invoked the hook). Env-var-based identity is
-    // unsafe because CLAUDITOR_SESSION_ID/TOKEN inherit to every descendant,
-    // so a grandchild Claude Code launched from inside a PTY would otherwise
-    // forge hooks attributed to its ancestor session.
     const handle = (hookName) => (req, res) => {
       const payload = typeof req.body === 'string' ? tryParse(req.body) : req.body || {};
       const ppid = Number(payload.clauditor_ppid) || 0;
       const sid = this.ptyManager?.findIdByPid(ppid) || null;
-      if (sid) this.stateEngine.handleHook(sid, hookName);
+      if (sid) {
+        this.stateEngine.handleHook(sid, hookName);
+        this._maybeEmitActivity(sid, hookName, payload);
+      }
       res.json({ ok: true, sid });
     };
 
@@ -37,6 +38,18 @@ class HookServer {
     this.app.post('/hook/stop', handle('stop'));
     this.app.post('/hook/notification', handle('notification'));
     this.app.get('/health', (_req, res) => res.json({ ok: true }));
+  }
+
+  _maybeEmitActivity(sid, hookName, payload) {
+    if (hookName !== 'pre-tool-use' && hookName !== 'post-tool-use') return;
+    const tool = payload.tool_name;
+    const filePath = payload.tool_input?.file_path;
+    if (!tool || !ACTIVITY_TOOLS.has(tool) || typeof filePath !== 'string') return;
+    this.emit('file-activity', {
+      sid, tool,
+      phase: hookName === 'pre-tool-use' ? 'pre' : 'post',
+      path: filePath,
+    });
   }
 
   start() {
