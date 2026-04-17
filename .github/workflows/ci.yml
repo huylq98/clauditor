@@ -9,12 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  unit:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+  frontend:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,5 +18,38 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - name: Run unit tests
-        run: npm run test:unit
+      - name: Type-check
+        run: npx tsc -b
+      - name: Build frontend
+        run: npm run build
+      - name: Playwright browser tests
+        run: |
+          npx playwright install chromium --with-deps
+          npx playwright test
+
+  backend:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux system deps
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev build-essential curl wget file libssl-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+      - name: cargo fmt
+        working-directory: src-tauri
+        run: cargo fmt --all -- --check
+      - name: cargo clippy
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+      - name: cargo test
+        working-directory: src-tauri
+        run: cargo test --all

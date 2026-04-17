@@ -1,0 +1,391 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Clauditor — logo proposals</title>
+<style>
+  :root {
+    --ink: #14161b;
+    --obsidian: #1a1d24;
+    --graphite: #20232b;
+    --graphite-raised: #272a33;
+    --rule: #2d3038;
+    --ivory: #c7c1b2;
+    --ivory-dim: #a8a294;
+    --dust: #7a7566;
+    --fog: #5a564e;
+    --ember: #c98469;
+    --ember-deep: #a86a51;
+    --ember-light: #d99a82;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 40px;
+    background: var(--ink);
+    color: var(--ivory);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  h1 {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-weight: 600;
+    font-size: 22px;
+    margin: 0 0 8px;
+    color: var(--ivory);
+    letter-spacing: -0.01em;
+  }
+  .intro {
+    color: var(--ivory-dim);
+    margin: 0 0 40px;
+    max-width: 720px;
+  }
+  .section {
+    margin: 48px 0;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+  }
+  .section-title {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--dust);
+    margin: 0 0 24px;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin: 16px 0 40px;
+  }
+  .card {
+    background: var(--obsidian);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .card-label {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--dust);
+    margin-top: auto;
+  }
+  .card .note {
+    font-size: 12px;
+    color: var(--ivory-dim);
+    text-align: center;
+    max-width: 220px;
+    margin: 0;
+  }
+  .mark { height: 64px; width: 64px; }
+  .mark-lg { height: 96px; width: 96px; }
+  .mark-sm { height: 24px; width: 24px; }
+
+  /* Wordmarks */
+  .wordmark {
+    font-weight: 600;
+    font-size: 36px;
+    letter-spacing: -0.02em;
+    color: var(--ivory);
+  }
+  .wordmark .accent { color: var(--ember); }
+  .wordmark.serif {
+    font-family: "Fraunces", "Iowan Old Style", serif;
+    font-weight: 500;
+    letter-spacing: 0.005em;
+  }
+  .lockup {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .lockup .mark { height: 40px; width: 40px; }
+  .lockup .wordmark { font-size: 24px; }
+
+  /* Rail preview */
+  .rail-preview {
+    background: var(--obsidian);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 0 18px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 12px 0 40px;
+  }
+  .rail-meta { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--dust); }
+  .rail-meta .v { color: var(--ivory); margin-left: 8px; }
+
+  /* Favicon-size preview */
+  .favicon-row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    padding: 16px 20px;
+    background: var(--obsidian);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+  }
+  .favicon-row span { color: var(--dust); font-family: "JetBrains Mono", monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; }
+
+  .code {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    color: var(--fog);
+    background: var(--graphite);
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-top: 8px;
+    white-space: pre;
+    overflow-x: auto;
+  }
+</style>
+</head>
+<body>
+
+<h1>Clauditor — logo proposals</h1>
+<p class="intro">Three mark directions, three wordmark treatments, and combined lockups. All SVG, all using the app's current ember palette. Scroll through and tell me which direction to commit.</p>
+
+<div class="section">
+  <div class="section-title">A — Layered diamond <span style="color:var(--ember)">(recommended)</span></div>
+  <div class="row">
+    <div class="card">
+      <!-- Layered diamond large -->
+      <svg class="mark-lg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <path d="M32 16 L52 32 L32 48 L12 32 Z" fill="#5a564e" opacity="0.35"/>
+        <path d="M32 12 L52 32 L32 48 L12 32 Z" fill="#a86a51" opacity="0.75"/>
+        <path d="M32 8 L52 28 L32 48 L12 28 Z" fill="#c98469"/>
+        <path d="M32 8 L52 28 L32 28 Z" fill="#d99a82" opacity="0.6"/>
+      </svg>
+      <p class="note">Three stacked facets — "multiple sessions" without being literal.</p>
+      <div class="card-label">A1 — 96px</div>
+    </div>
+
+    <div class="card">
+      <!-- Flat single diamond with internal lines -->
+      <svg class="mark-lg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <path d="M32 8 L56 32 L32 56 L8 32 Z" fill="#c98469"/>
+        <path d="M32 8 L32 56" stroke="#14161b" stroke-width="0.8" opacity="0.4"/>
+        <path d="M8 32 L56 32" stroke="#14161b" stroke-width="0.8" opacity="0.4"/>
+        <path d="M32 8 L56 32 L32 32 L8 32 Z" fill="#14161b" opacity="0.08"/>
+        <path d="M32 32 L56 32 L32 56 Z" fill="#14161b" opacity="0.12"/>
+      </svg>
+      <p class="note">Single diamond with faceted highlights. Gem-like.</p>
+      <div class="card-label">A2 — 96px</div>
+    </div>
+
+    <div class="card">
+      <!-- Three offset diamonds -->
+      <svg class="mark-lg" viewBox="0 0 96 64" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 18 L32 32 L20 46 L8 32 Z" fill="#5a564e" opacity="0.5"/>
+        <path d="M48 14 L60 32 L48 50 L36 32 Z" fill="#a86a51" opacity="0.85"/>
+        <path d="M76 10 L88 32 L76 54 L64 32 Z" fill="#c98469"/>
+      </svg>
+      <p class="note">Three diamonds in sequence — tabs implied. Horizontal variant for the rail.</p>
+      <div class="card-label">A3 — horizontal</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">B — Bracket + cursor</div>
+  <div class="row">
+    <div class="card">
+      <svg class="mark-lg" viewBox="0 0 96 64" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 12 L8 12 L8 52 L16 52" fill="none" stroke="#c98469" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M80 12 L88 12 L88 52 L80 52" fill="none" stroke="#c98469" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="40" y="26" width="16" height="14" fill="#c98469"/>
+      </svg>
+      <p class="note">Brackets = CLI. Filled cursor = active session.</p>
+      <div class="card-label">B1 — bracketed cursor</div>
+    </div>
+
+    <div class="card">
+      <svg class="mark-lg" viewBox="0 0 96 64" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 12 L8 12 L8 52 L16 52" fill="none" stroke="#c98469" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M80 12 L88 12 L88 52 L80 52" fill="none" stroke="#c98469" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="28" y="26" width="10" height="14" fill="#c98469" opacity="0.45"/>
+        <rect x="43" y="26" width="10" height="14" fill="#c98469" opacity="0.75"/>
+        <rect x="58" y="26" width="10" height="14" fill="#c98469"/>
+      </svg>
+      <p class="note">Bracketed three cursors — multiple sessions + CLI.</p>
+      <div class="card-label">B2 — multi-cursor</div>
+    </div>
+
+    <div class="card">
+      <svg class="mark-lg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <path d="M14 14 L8 14 L8 50 L14 50" fill="none" stroke="#c98469" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M50 14 L56 14 L56 50 L50 50" fill="none" stroke="#c98469" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="32" y="40" text-anchor="middle" font-family="IBM Plex Sans" font-weight="700" font-size="22" fill="#c7c1b2">c</text>
+      </svg>
+      <p class="note">Brackets containing the letter c. Compact.</p>
+      <div class="card-label">B3 — [c]</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">C — Stacked tabs</div>
+  <div class="row">
+    <div class="card">
+      <svg class="mark-lg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 22 L22 22 L26 14 L38 14 L42 22 L58 22 L58 52 L6 52 Z" fill="none" stroke="#c98469" stroke-width="2.5" stroke-linejoin="round"/>
+        <rect x="14" y="34" width="36" height="2.5" fill="#c98469" opacity="0.6"/>
+        <rect x="14" y="40" width="26" height="2.5" fill="#c98469" opacity="0.4"/>
+      </svg>
+      <p class="note">Single tab container with content lines. Literal.</p>
+      <div class="card-label">C1 — tab frame</div>
+    </div>
+
+    <div class="card">
+      <svg class="mark-lg" viewBox="0 0 96 64" xmlns="http://www.w3.org/2000/svg">
+        <rect x="8" y="18" width="24" height="8" rx="2" fill="#5a564e" opacity="0.5"/>
+        <rect x="36" y="18" width="24" height="8" rx="2" fill="#a86a51" opacity="0.8"/>
+        <rect x="64" y="18" width="24" height="8" rx="2" fill="#c98469"/>
+        <rect x="8" y="32" width="80" height="16" rx="2" fill="#272a33"/>
+        <rect x="14" y="38" width="6" height="2" fill="#c98469"/>
+        <rect x="24" y="38" width="12" height="2" fill="#a8a294"/>
+      </svg>
+      <p class="note">Three tabs with a terminal body. Most literal.</p>
+      <div class="card-label">C2 — tab + shell</div>
+    </div>
+
+    <div class="card">
+      <svg class="mark-lg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <!-- Monogram "cl" in a tab shape -->
+        <path d="M6 18 L26 18 L30 10 L58 10 L58 54 L6 54 Z" fill="#272a33" stroke="#c98469" stroke-width="2" stroke-linejoin="round"/>
+        <text x="32" y="42" text-anchor="middle" font-family="IBM Plex Sans" font-weight="700" font-size="22" fill="#c98469">cl</text>
+      </svg>
+      <p class="note">Tab-shaped frame with "cl" monogram inside.</p>
+      <div class="card-label">C3 — tab + cl</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Wordmarks</div>
+  <div class="row">
+    <div class="card">
+      <div class="wordmark">clauditor<span class="accent">.</span></div>
+      <p class="note">Sans lowercase + ember period. Modern devtool.</p>
+      <div class="card-label">W1 — sans + dot</div>
+    </div>
+
+    <div class="card">
+      <div class="wordmark">cla<span class="accent">u</span>ditor</div>
+      <p class="note">Sans lowercase with "u" in ember — nods to "you" (sessions you manage).</p>
+      <div class="card-label">W2 — accent letter</div>
+    </div>
+
+    <div class="card">
+      <div class="wordmark serif">Clauditor</div>
+      <p class="note">Current serif treatment. For reference.</p>
+      <div class="card-label">W3 — current (serif)</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Combined lockups (recommended: A1 + W1)</div>
+  <div class="row" style="grid-template-columns: repeat(2, 1fr);">
+    <div class="card">
+      <div class="lockup">
+        <svg class="mark" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style="height:40px;width:40px;">
+          <path d="M32 16 L52 32 L32 48 L12 32 Z" fill="#5a564e" opacity="0.35"/>
+          <path d="M32 12 L52 32 L32 48 L12 32 Z" fill="#a86a51" opacity="0.75"/>
+          <path d="M32 8 L52 28 L32 48 L12 28 Z" fill="#c98469"/>
+          <path d="M32 8 L52 28 L32 28 Z" fill="#d99a82" opacity="0.6"/>
+        </svg>
+        <div class="wordmark" style="font-size:24px;">clauditor<span class="accent">.</span></div>
+      </div>
+      <div class="card-label">A1 + W1</div>
+    </div>
+
+    <div class="card">
+      <div class="lockup">
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style="height:36px;width:36px;">
+          <path d="M14 14 L8 14 L8 50 L14 50" fill="none" stroke="#c98469" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M50 14 L56 14 L56 50 L50 50" fill="none" stroke="#c98469" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="32" y="40" text-anchor="middle" font-family="IBM Plex Sans" font-weight="700" font-size="22" fill="#c7c1b2">c</text>
+        </svg>
+        <div class="wordmark" style="font-size:24px;">clauditor</div>
+      </div>
+      <div class="card-label">B3 + W1 (no dot)</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">In-rail preview (what it looks like in the app)</div>
+
+  <p style="color:var(--dust);font-size:12px;">Current:</p>
+  <div class="rail-preview">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="color:var(--ember);font-size:13px;">◆</span>
+      <span style="font-family:'Fraunces',serif;font-size:16px;">Clauditor</span>
+    </div>
+    <div class="rail-meta">ACTIVE <span class="v">2 running · 1 idle</span></div>
+  </div>
+
+  <p style="color:var(--dust);font-size:12px;">Proposed (A1 + W1):</p>
+  <div class="rail-preview">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style="height:22px;width:22px;">
+        <path d="M32 16 L52 32 L32 48 L12 32 Z" fill="#5a564e" opacity="0.35"/>
+        <path d="M32 12 L52 32 L32 48 L12 32 Z" fill="#a86a51" opacity="0.75"/>
+        <path d="M32 8 L52 28 L32 48 L12 28 Z" fill="#c98469"/>
+      </svg>
+      <span style="font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:15px;letter-spacing:-0.01em;">clauditor<span style="color:var(--ember)">.</span></span>
+    </div>
+    <div class="rail-meta">ACTIVE <span class="v">2 running · 1 idle</span></div>
+  </div>
+
+  <p style="color:var(--dust);font-size:12px;">Proposed (B3 + wordmark):</p>
+  <div class="rail-preview">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style="height:22px;width:22px;">
+        <path d="M14 14 L8 14 L8 50 L14 50" fill="none" stroke="#c98469" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M50 14 L56 14 L56 50 L50 50" fill="none" stroke="#c98469" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="32" y="42" text-anchor="middle" font-family="IBM Plex Sans" font-weight="700" font-size="28" fill="#c7c1b2">c</text>
+      </svg>
+      <span style="font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:15px;letter-spacing:-0.01em;">clauditor</span>
+    </div>
+    <div class="rail-meta">ACTIVE <span class="v">2 running · 1 idle</span></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Favicon / tray icon size (small)</div>
+  <div class="favicon-row">
+    <span>16px</span>
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style="height:16px;width:16px;">
+      <path d="M32 8 L56 32 L32 56 L8 32 Z" fill="#c98469"/>
+    </svg>
+    <span>24px</span>
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style="height:24px;width:24px;">
+      <path d="M32 8 L56 32 L32 56 L8 32 Z" fill="#c98469"/>
+    </svg>
+    <span>32px</span>
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style="height:32px;width:32px;">
+      <path d="M32 16 L52 32 L32 48 L12 32 Z" fill="#5a564e" opacity="0.35"/>
+      <path d="M32 12 L52 32 L32 48 L12 32 Z" fill="#a86a51" opacity="0.75"/>
+      <path d="M32 8 L52 28 L32 48 L12 28 Z" fill="#c98469"/>
+    </svg>
+    <span>— at 16px the layered version loses fidelity; use a single-shape fallback.</span>
+  </div>
+</div>
+
+<p style="color:var(--dust);margin-top:64px;font-size:12px;">Open this file directly (file://) in a browser to preview. Say "pick A1 + W1" (or whichever combo) and I'll wire it into the app.</p>
+
+</body>
+</html>
