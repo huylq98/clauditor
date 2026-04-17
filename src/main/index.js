@@ -60,6 +60,7 @@ function createWindow() {
       mainWindow.hide();
     }
   });
+  mainWindow.on('focus', () => mainWindow.flashFrame(false));
 }
 
 function focusSession(id) {
@@ -111,7 +112,16 @@ async function bootstrap() {
 
   settingsInstaller.install();
 
-  notifier = new Notifier({ onClick: focusSession });
+  notifier = new Notifier({
+    onClick: focusSession,
+    onAttention: (_id, state) => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      if (mainWindow.isFocused()) return;
+      if (state === 'awaiting_permission' || state === 'awaiting_user') {
+        mainWindow.flashFrame(true);
+      }
+    },
+  });
 
   ptyManager.on('spawn', (session) => {
     stateEngine.register(session.id);
