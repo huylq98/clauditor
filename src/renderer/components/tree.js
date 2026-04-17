@@ -44,5 +44,5 @@ function hasMatchingDescendant(dirPath, children, query) {
   return false;
 }
 
-module.exports = { fuzzyMatch, flattenTree };
+if (typeof module !== 'undefined' && module.exports) module.exports = { fuzzyMatch, flattenTree };
 if (typeof window !== 'undefined') window.__clauditorTree = { fuzzyMatch, flattenTree };

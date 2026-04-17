@@ -7,7 +7,7 @@ test('app launches and renderer reaches complete state', async () => {
     await window.waitForFunction(() => document.readyState === 'complete');
 
     // Root layout containers from index.html exist
-    await expect(window.locator('#session-list')).toBeAttached();
+    await expect(window.locator('#tab-list')).toBeAttached();
     await expect(window.locator('#terminal-container')).toBeAttached();
 
     // Test bridge is installed
