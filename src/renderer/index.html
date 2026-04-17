@@ -4,25 +4,55 @@
     <meta charset="utf-8" />
     <title>Clauditor</title>
     <link rel="stylesheet" href="../../node_modules/xterm/css/xterm.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <div id="app">
+      <header id="rail">
+        <div class="rail-brand">
+          <span class="brand-mark">◆</span>
+          <span class="brand-name">Clauditor</span>
+          <span class="brand-sep">/</span>
+          <span class="brand-tag">session manager</span>
+        </div>
+        <div class="rail-meta">
+          <span class="meta-label">active</span>
+          <span id="aggregate" class="meta-value">No sessions</span>
+        </div>
+      </header>
       <aside id="sidebar">
         <div id="sidebar-header">
-          <button id="new-session" title="New Session">+ New Session</button>
+          <div class="panel-heading">
+            <span class="panel-eyebrow">&sect; 01</span>
+            <h2 class="panel-title">Sessions</h2>
+          </div>
+          <button id="new-session" title="New Session">+ new</button>
         </div>
         <ul id="session-list"></ul>
+        <div class="sidebar-footer">
+          <span class="footer-mark">— end —</span>
+        </div>
       </aside>
       <main id="main">
         <header id="topbar">
-          <span id="cwd-label">No session</span>
-          <span id="state-pill" class="pill">—</span>
-          <button id="kill-btn" disabled>Kill</button>
+          <div class="topbar-left">
+            <span class="topbar-eyebrow">working directory</span>
+            <div id="cwd-label" class="topbar-cwd">No session selected</div>
+          </div>
+          <div class="topbar-right">
+            <span id="state-pill" class="pill">idle</span>
+            <button id="kill-btn" disabled>Kill</button>
+          </div>
         </header>
         <div id="terminal-container"></div>
         <footer id="statusbar">
-          <span id="aggregate">0 sessions</span>
+          <span class="status-dot-idle"></span>
+          <span class="status-label">standby</span>
+          <span class="status-sep">·</span>
+          <span class="status-hint">double-click a session to rename</span>
         </footer>
       </main>
     </div>
