@@ -10,6 +10,7 @@ const { TrayController } = require('./tray');
 const settingsInstaller = require('./settings-installer');
 const { FileWatcher } = require('./file-watcher');
 const { FileActivityService } = require('./file-activity-service');
+const { SessionStore } = require('./session-store');
 
 const TOKEN = crypto.randomBytes(24).toString('hex');
 process.env.CLAUDITOR_TOKEN = TOKEN;
@@ -28,6 +29,7 @@ let quitting = false;
 let fileWatcher = null;
 let activityService = null;
 let activityTick = null;
+let store = null;
 
 function broadcast(channel, ...args) {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -87,6 +89,20 @@ async function bootstrap() {
   fileWatcher = new FileWatcher();
   activityService = new FileActivityService();
 
+  store = new SessionStore({ userDataDir: process.env.CLAUDITOR_USER_DATA || app.getPath('userData') });
+  const savedRecords = await store.load();
+
+  store.setSnapshot(() => ptyManager.list().map((desc) => {
+    const s = ptyManager.sessions.get(desc.id);
+    return {
+      id: desc.id,
+      name: desc.name,
+      cwd: desc.cwd,
+      createdAt: desc.createdAt,
+      buffer: s?.buffer || '',
+    };
+  }));
+
   const toRel = (sid, abs) => {
     if (!abs) return abs;
     const desc = ptyManager.describe(sid);
@@ -141,6 +157,19 @@ async function bootstrap() {
     broadcast('session:exit', id, code);
   });
 
+  for (const rec of savedRecords) {
+    ptyManager.registerStub(rec);
+    stateEngine.register(rec.id);
+    fileWatcher.create(rec.id, rec.cwd).catch(() => {});
+    activityService.register(rec.id);
+    stateEngine.markExited(rec.id);
+  }
+
+  ptyManager.on('spawn', () => store.markDirty());
+  ptyManager.on('exit', () => store.markDirty());
+  ptyManager.on('rename', () => store.markDirty());
+  ptyManager.on('restart', () => store.markDirty());
+
   stateEngine.on('change', (id, next) => {
     broadcast('session:state', id, next);
     pushTrayUpdate();
@@ -191,6 +220,24 @@ ipcMain.handle('sessions:rename', (_e, id, name) => ptyManager.rename(id, name))
 ipcMain.handle('sessions:write', (_e, id, data) => { ptyManager.write(id, data); stateEngine.noteActivity(id); return true; });
 ipcMain.handle('sessions:resize', (_e, id, cols, rows) => { ptyManager.resize(id, cols, rows); return true; });
 ipcMain.handle('sessions:buffer', (_e, id) => ptyManager.getBuffer(id));
+ipcMain.handle('sessions:forget', async (_e, id) => {
+  const s = ptyManager.sessions.get(id);
+  if (s?.proc) { try { s.proc.kill(); } catch (e) {} }
+  ptyManager.sessions.delete(id);
+  fileWatcher.destroy(id).catch(() => {});
+  activityService.unregister(id);
+  await store.remove(id);
+  return true;
+});
+ipcMain.handle('sessions:restart', (_e, id, dims) => {
+  const desc = ptyManager.restart(id, dims || {});
+  if (desc) {
+    stateEngine._set(id, 'running');
+    stateEngine._armIdle(id);
+    return desc;
+  }
+  return null;
+});
 ipcMain.handle('tree:list', (_e, sid, relPath) => fileWatcher.list(sid, relPath));
 ipcMain.handle('file:read', (_e, sid, relPath) => fileWatcher.readFile(sid, relPath));
 ipcMain.handle('activity:snapshot', (_e, sid) => activityService.snapshot(sid));
@@ -211,6 +258,7 @@ app.on('before-quit', async (e) => {
   e.preventDefault();
   try {
     settingsInstaller.uninstall();
+    try { store?.flushSync(); } catch (e) { console.error('[clauditor] flushSync failed:', e); }
     ptyManager?.killAll();
     await hookServer?.stop();
     if (activityTick) clearInterval(activityTick);

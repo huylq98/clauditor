@@ -125,7 +125,7 @@ idle ◀─(5 min)── (any) ────────▶ running
 
 ## Roadmap
 
-- [ ] Persist session layout + names across restarts
+- [x] Persist session layout + names across restarts
 - [ ] Search across all session transcripts
 - [ ] Bulk actions (kill all, restart all)
 - [ ] Per-session themes / accent colors

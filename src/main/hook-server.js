@@ -55,11 +55,13 @@ class HookServer extends EventEmitter {
   }
 
   start() {
+    const port = Number(process.env.CLAUDITOR_HOOK_PORT) || PORT;
     return new Promise((resolve, reject) => {
-      this.server = this.app.listen(PORT, '127.0.0.1', (err) => {
+      this.server = this.app.listen(port, '127.0.0.1', (err) => {
         if (err) reject(err);
-        else resolve(PORT);
+        else resolve(port);
       });
+      this.server.on('error', reject);
     });
   }
 
