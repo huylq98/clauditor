@@ -127,7 +127,7 @@ idle ◀─(5 min)── (any) ────────▶ running
 
 - [x] Persist session layout + names across restarts
 - [ ] Search across all session transcripts
-- [ ] Bulk actions (kill all, restart all)
+- [x] Bulk actions (kill all, restart all)
 - [ ] Per-session themes / accent colors
 - [ ] Plugin API for custom side panels
 - [ ] Resumable sessions backed by Claude Code's session history
