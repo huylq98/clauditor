@@ -271,6 +271,27 @@ function doRestartAllExited(dims) {
 
 ipcMain.handle('sessions:restartAllExited', (_e, dims) => doRestartAllExited(dims));
 
+async function doForgetAllExited() {
+  const ids = [];
+  for (const [id] of ptyManager.sessions) {
+    if (stateEngine.get(id) === 'exited') ids.push(id);
+  }
+  for (const id of ids) {
+    const s = ptyManager.sessions.get(id);
+    if (s?.proc) { try { s.proc.kill(); } catch (e) {} }
+    ptyManager.sessions.delete(id);
+    fileWatcher.destroy(id).catch(() => {});
+    activityService.unregister(id);
+    broadcast('session:forgotten', id);
+  }
+  if (store) {
+    try { store.flushSync(); } catch (e) { console.error('[clauditor] flushSync after forgetAll failed:', e); }
+  }
+  return { forgotten: ids.length };
+}
+
+ipcMain.handle('sessions:forgetAllExited', () => doForgetAllExited());
+
 ipcMain.handle('tree:list', (_e, sid, relPath) => fileWatcher.list(sid, relPath));
 ipcMain.handle('file:read', (_e, sid, relPath) => fileWatcher.readFile(sid, relPath));
 ipcMain.handle('activity:snapshot', (_e, sid) => activityService.snapshot(sid));

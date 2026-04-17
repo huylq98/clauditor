@@ -34,7 +34,7 @@ tabBar.init({
     const { cols, rows } = probeDims();
     await api.restartAllExitedSessions({ cols, rows });
   },
-  onForgetAllExited: () => {},
+  onForgetAllExited: () => { api.forgetAllExitedSessions(); },
 });
 
 function createTerminal() {
@@ -259,6 +259,19 @@ api.onFocus((id) => { if (id && sessions.has(id)) selectSession(id); });
 api.onNewSessionRequest(() => newBtn.click());
 api.onTreeEvent((sid, ev) => sidebar.applyTreeEvent(sid, ev));
 api.onActivityDelta((sid, delta) => sidebar.applyDelta(sid, delta));
+api.onForgotten((id) => {
+  const s = sessions.get(id);
+  if (!s) return;
+  s.el.remove();
+  sessions.delete(id);
+  tabBar.remove(id);
+  sidebar.removeSession(id);
+  if (activeId === id) {
+    const first = sessions.keys().next().value || null;
+    selectSession(first);
+  }
+  renderAggregate();
+});
 
 (async () => {
   const existing = await api.listSessions();
