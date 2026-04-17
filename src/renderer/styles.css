@@ -24,7 +24,6 @@
   --state-idle: #5a564e;
   --state-exited: #3c3f48;
 
-  --font-serif: "Fraunces", "Iowan Old Style", "Georgia", serif;
   --font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", "Cascadia Mono", "Consolas", "Menlo", monospace;
 }
@@ -42,18 +41,6 @@ html, body {
   letter-spacing: 0.01em;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
-}
-
-/* Grain / atmosphere — subtle noise over canvas */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.03;
-  z-index: 1;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.6'/></svg>");
-  mix-blend-mode: overlay;
 }
 
 /* App grid: rail on top, tabbar, then sidebar + main below */
@@ -121,43 +108,15 @@ body::before {
   color: var(--ember);
   margin-left: 1px;
 }
-.rail-meta {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-}
-.meta-label {
-  color: var(--fog);
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-}
-.meta-value {
-  color: var(--ivory);
-}
-
 /* ============ PANEL HEADINGS (shared) ============ */
-.panel-heading {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.panel-eyebrow {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--fog);
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-}
 .panel-title {
   margin: 0;
-  font-family: var(--font-serif);
-  font-weight: 400;
-  font-size: 22px;
-  letter-spacing: -0.005em;
-  color: var(--ivory);
-  font-variation-settings: "opsz" 36;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--dust);
 }
 
 .status-dot {
@@ -218,21 +177,9 @@ body::before {
   opacity: 0.5;
 }
 
-.topbar-left {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  flex: 1;
-}
-.topbar-eyebrow {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--fog);
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-}
 .topbar-cwd {
+  flex: 1;
+  min-width: 0;
   font-family: var(--font-mono);
   font-size: 12.5px;
   color: var(--ivory-dim);
@@ -332,29 +279,18 @@ body::before {
 #statusbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 16px;
   padding: 0 22px;
   border-top: 1px solid var(--rule);
   background: var(--obsidian);
   font-family: var(--font-mono);
   font-size: 10px;
-  color: var(--fog);
+  color: var(--dust);
   letter-spacing: 0.08em;
 }
-.status-dot-idle {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--dust);
-  opacity: 0.6;
-}
-.status-label {
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  color: var(--dust);
-}
-.status-sep { opacity: 0.4; }
-.status-hint { font-style: italic; opacity: 0.7; }
+.status-aggregate { color: var(--ivory-dim); }
+.status-hint { color: var(--fog); }
 
 /* Reduce body ghost cursor flicker on Electron */
 *::selection { background: rgba(201, 132, 105, 0.28); color: var(--ivory); }
@@ -496,11 +432,8 @@ body::before {
   padding: 8px 0;
   min-height: 0;
 }
-#sidebar-tree .panel-heading {
+#sidebar-tree .panel-title {
   padding: 2px 12px 8px;
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
 }
 #file-tree {
   list-style: none;
