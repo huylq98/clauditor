@@ -67,16 +67,17 @@
         if (st.touching.has(n.path)) li.classList.add('touching');
         if (st.created.has(n.path)) li.classList.add('created');
         else if (st.modified.has(n.path)) li.classList.add('modified');
+      } else if (n.empty) {
+        li.classList.add('empty-dir');
       }
       li.style.paddingLeft = `${8 + n.depth * 12}px`;
       li.dataset.path = n.path;
       li.dataset.dir = n.dir ? '1' : '0';
       const glyph = n.dir
-        ? (st.expanded.has(n.path) ? '▾' : '▸')
+        ? (n.empty ? '·' : (st.expanded.has(n.path) ? '▾' : '▸'))
         : (st.created.has(n.path) ? '+' : st.modified.has(n.path) ? '●' : '·');
       li.innerHTML = `<span class="tree-glyph">${glyph}</span><span class="tree-name">${escapeHtml(n.name)}</span>`;
       li.onclick = () => onNodeClick(n);
-      li.ondblclick = () => { if (!n.dir && api.revealPath) api.revealPath(activeId, n.path); };
       treeEl.appendChild(li);
     }
   }
@@ -85,10 +86,48 @@
     const st = perSession.get(activeId);
     if (!st) return;
     if (n.dir) {
+      if (n.empty) return;
       if (st.expanded.has(n.path)) st.expanded.delete(n.path);
       else { st.expanded.add(n.path); await loadChildren(activeId, n.path); }
       renderTree();
+    } else {
+      openPreview(activeId, n.path);
     }
+  }
+
+  async function openPreview(sid, relPath) {
+    if (!api.readFile) return;
+    const res = await api.readFile(sid, relPath);
+    if (!res) return;
+    showPreviewOverlay(relPath, res);
+  }
+
+  function showPreviewOverlay(relPath, res) {
+    let overlay = document.getElementById('file-preview');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'file-preview';
+      overlay.innerHTML = `
+        <div class="preview-panel">
+          <header class="preview-head">
+            <span class="preview-path"></span>
+            <span class="preview-meta"></span>
+            <button class="preview-close" title="Close (Esc)">×</button>
+          </header>
+          <pre class="preview-body"></pre>
+        </div>`;
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('open'); });
+      overlay.querySelector('.preview-close').addEventListener('click', () => overlay.classList.remove('open'));
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && overlay.classList.contains('open')) overlay.classList.remove('open');
+      });
+    }
+    overlay.querySelector('.preview-path').textContent = relPath;
+    const sizeKb = (res.size / 1024).toFixed(1);
+    overlay.querySelector('.preview-meta').textContent = `${sizeKb} KB${res.truncated ? ' · truncated' : ''}`;
+    overlay.querySelector('.preview-body').textContent = res.content;
+    overlay.classList.add('open');
   }
 
   function renderActivity() {

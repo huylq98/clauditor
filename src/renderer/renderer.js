@@ -16,6 +16,7 @@ const newBtn = document.getElementById('new-session');
 
 sidebar.init({
   listTree: api.listTree,
+  readFile: api.readFile,
   getActivitySnapshot: api.getActivitySnapshot,
 });
 tabBar.init({
@@ -29,20 +30,22 @@ function createTerminal() {
     fontFamily: '"JetBrains Mono", "Cascadia Mono", "Consolas", "Menlo", monospace',
     fontSize: 13,
     theme: {
-      background: '#0b0c10', foreground: '#ece4d2',
-      cursor: '#ff5a36', cursorAccent: '#0b0c10',
-      selectionBackground: 'rgba(255, 90, 54, 0.28)',
-      black: '#141519', red: '#ff5a36', green: '#a3c966', yellow: '#e8b04d',
-      blue: '#8fb3c5', magenta: '#c99ad3', cyan: '#7dc2c4', white: '#ece4d2',
-      brightBlack: '#66625a', brightRed: '#ff7858', brightGreen: '#b5d97d',
-      brightYellow: '#f0c268', brightBlue: '#a6c6d5', brightMagenta: '#d6aee0',
-      brightCyan: '#95d2d4', brightWhite: '#faf3e3',
+      background: '#14161b', foreground: '#c7c1b2',
+      cursor: '#c98469', cursorAccent: '#14161b',
+      selectionBackground: 'rgba(201, 132, 105, 0.24)',
+      black: '#1a1d24', red: '#c98469', green: '#8ba668', yellow: '#c99d62',
+      blue: '#7a97a6', magenta: '#a88ab4', cyan: '#6fa6a8', white: '#c7c1b2',
+      brightBlack: '#5a564e', brightRed: '#d99a82', brightGreen: '#9cb87a',
+      brightYellow: '#d4ab76', brightBlue: '#8fa8b6', brightMagenta: '#b79dc1',
+      brightCyan: '#85b4b5', brightWhite: '#d6cdb8',
     },
     cursorBlink: true,
-    scrollback: 10000,
+    scrollback: 5000,
     allowProposedApi: true,
     smoothScrollDuration: 0,
     macOptionIsMeta: true,
+    minimumContrastRatio: 1,
+    fastScrollModifier: 'shift',
   });
   const fit = new FitAddon.FitAddon();
   term.loadAddon(fit);
@@ -74,12 +77,25 @@ function ensureSession(s) {
   term.onData((data) => api.write(s.id, data));
   term.onResize(({ cols, rows }) => api.resize(s.id, cols, rows));
 
-  const entry = { ...s, state: s.state || 'running', term, fit, el };
+  const entry = { ...s, state: s.state || 'running', term, fit, el, pending: [], raf: 0 };
   sessions.set(s.id, entry);
   tabBar.upsert(entry);
   sidebar.addSession(entry.id);
   renderAggregate();
   return entry;
+}
+
+function flushWrites(s) {
+  s.raf = 0;
+  if (!s.pending.length) return;
+  const chunk = s.pending.length === 1 ? s.pending[0] : s.pending.join('');
+  s.pending.length = 0;
+  s.term.write(chunk);
+}
+
+function queueWrite(s, chunk) {
+  s.pending.push(chunk);
+  if (!s.raf) s.raf = requestAnimationFrame(() => flushWrites(s));
 }
 
 async function selectSession(id) {
@@ -205,7 +221,7 @@ function refit() {
 window.addEventListener('resize', refit);
 
 api.onCreated((s) => { const entry = ensureSession(s); if (!activeId) selectSession(entry.id); });
-api.onData((id, chunk) => { const s = sessions.get(id); if (s && s.hydrated) s.term.write(chunk); });
+api.onData((id, chunk) => { const s = sessions.get(id); if (s && s.hydrated) queueWrite(s, chunk); });
 api.onState((id, state) => {
   const s = sessions.get(id);
   if (!s) return;

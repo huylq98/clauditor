@@ -14,6 +14,10 @@ const { FileActivityService } = require('./file-activity-service');
 const TOKEN = crypto.randomBytes(24).toString('hex');
 process.env.CLAUDITOR_TOKEN = TOKEN;
 
+if (process.platform === 'win32') {
+  app.setAppUserModelId('dev.clauditor.app');
+}
+
 let mainWindow = null;
 let tray = null;
 let ptyManager = null;
@@ -60,9 +64,15 @@ function createWindow() {
 
 function focusSession(id) {
   if (!mainWindow) createWindow();
+  if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show();
+  mainWindow.moveTop?.();
   mainWindow.focus();
-  broadcast('session:focus', id);
+  if (process.platform === 'win32') {
+    mainWindow.setAlwaysOnTop(true);
+    setTimeout(() => mainWindow?.setAlwaysOnTop(false), 150);
+  }
+  if (id) broadcast('session:focus', id);
 }
 
 function pushTrayUpdate() {
@@ -168,10 +178,11 @@ ipcMain.handle('sessions:create', async (_e, { cwd, name, cols, rows } = {}) => 
 
 ipcMain.handle('sessions:kill', (_e, id) => { ptyManager.kill(id); return true; });
 ipcMain.handle('sessions:rename', (_e, id, name) => ptyManager.rename(id, name));
-ipcMain.handle('sessions:write', (_e, id, data) => { ptyManager.write(id, data); return true; });
+ipcMain.handle('sessions:write', (_e, id, data) => { ptyManager.write(id, data); stateEngine.noteActivity(id); return true; });
 ipcMain.handle('sessions:resize', (_e, id, cols, rows) => { ptyManager.resize(id, cols, rows); return true; });
 ipcMain.handle('sessions:buffer', (_e, id) => ptyManager.getBuffer(id));
 ipcMain.handle('tree:list', (_e, sid, relPath) => fileWatcher.list(sid, relPath));
+ipcMain.handle('file:read', (_e, sid, relPath) => fileWatcher.readFile(sid, relPath));
 ipcMain.handle('activity:snapshot', (_e, sid) => activityService.snapshot(sid));
 
 app.whenReady().then(async () => {
