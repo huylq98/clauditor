@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="../../node_modules/xterm/css/xterm.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -20,10 +20,6 @@
             <path d="M32 8 L52 28 L32 28 Z" fill="var(--ember-light)" opacity="0.6"/>
           </svg>
           <span class="brand-name">clauditor<span class="brand-dot">.</span></span>
-        </div>
-        <div class="rail-meta">
-          <span class="meta-label">active</span>
-          <span id="aggregate" class="meta-value">No sessions</span>
         </div>
       </header>
 
@@ -39,10 +35,7 @@
           <input id="tree-filter" type="text" placeholder="filter files…" spellcheck="false" />
         </div>
         <div id="sidebar-tree">
-          <div class="panel-heading">
-            <span class="panel-eyebrow">&sect; 01</span>
-            <h2 class="panel-title">Files</h2>
-          </div>
+          <h2 class="panel-title">Files</h2>
           <ul id="file-tree"></ul>
           <div class="sidebar-empty" id="tree-empty">No session selected.</div>
         </div>
@@ -56,10 +49,7 @@
 
       <main id="main">
         <header id="topbar">
-          <div class="topbar-left">
-            <span class="topbar-eyebrow">working directory</span>
-            <div id="cwd-label" class="topbar-cwd">No session selected</div>
-          </div>
+          <div id="cwd-label" class="topbar-cwd">No session selected</div>
           <div class="topbar-right">
             <span id="state-pill" class="pill">idle</span>
             <button id="kill-btn" disabled>Kill</button>
@@ -67,10 +57,8 @@
         </header>
         <div id="terminal-container"></div>
         <footer id="statusbar">
-          <span class="status-dot-idle"></span>
-          <span class="status-label">standby</span>
-          <span class="status-sep">·</span>
-          <span class="status-hint">Ctrl+1..9 switch tabs · Ctrl+T new · Ctrl+W close</span>
+          <span id="aggregate" class="status-aggregate">No sessions</span>
+          <span class="status-hint">Ctrl+1..9 switch · Ctrl+T new · Ctrl+W close</span>
         </footer>
       </main>
     </div>
