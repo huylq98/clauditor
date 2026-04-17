@@ -27,3 +27,12 @@ test('save then load roundtrip preserves fields', async () => {
   const records = await store2.load();
   expect(records).toEqual(input);
 });
+
+test('corrupt file is quarantined and load returns empty', async () => {
+  const dir = tmpUserData();
+  fs.writeFileSync(path.join(dir, 'sessions.json'), 'not json{');
+  const store = new SessionStore({ userDataDir: dir });
+  const records = await store.load();
+  expect(records).toEqual([]);
+  expect(fs.existsSync(path.join(dir, 'sessions.json.corrupt'))).toBe(true);
+});
