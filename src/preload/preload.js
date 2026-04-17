@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('clauditor', {
   getBuffer: (id) => ipcRenderer.invoke('sessions:buffer', id),
 
   listTree: (sid, relPath) => ipcRenderer.invoke('tree:list', sid, relPath),
+  readFile: (sid, relPath) => ipcRenderer.invoke('file:read', sid, relPath),
   getActivitySnapshot: (sid) => ipcRenderer.invoke('activity:snapshot', sid),
 
   onCreated: (cb) => ipcRenderer.on('session:created', (_e, s) => cb(s)),

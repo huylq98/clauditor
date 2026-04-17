@@ -40,6 +40,15 @@ class StateEngine extends EventEmitter {
     this.emit('change', id, 'exited', prev);
   }
 
+  noteActivity(id) {
+    if (!this.states.has(id)) return;
+    const cur = this.states.get(id);
+    if (cur === 'idle' || cur === 'awaiting_user' || cur === 'awaiting_permission') {
+      this._set(id, 'running');
+    }
+    if (cur !== 'exited') this._armIdle(id);
+  }
+
   handleHook(id, hook) {
     if (!this.states.has(id)) return;
     switch (hook) {

@@ -17,6 +17,10 @@ function flattenTree({ children, expanded, query }) {
     for (const kid of kids) {
       const path = parentPath === '.' ? kid.name : `${parentPath}/${kid.name}`;
       if (kid.dir) {
+        if (kid.empty) {
+          if (!query || fuzzyMatch(query, path)) out.push({ ...kid, path, depth });
+          continue;
+        }
         const isExpanded = expanded.has(path) || hasMatchingDescendant(path, children, query);
         if (isExpanded || !query || fuzzyMatch(query, path)) out.push({ ...kid, path, depth });
         if (isExpanded) visit(path, depth + 1);

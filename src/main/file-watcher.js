@@ -46,13 +46,49 @@ class FileWatcher extends EventEmitter {
     } catch {
       return [];
     }
-    return dirents
-      .filter((d) => !this._shouldIgnore(path.join(abs, d.name), entry.root, entry.ignores))
-      .map((d) => ({ name: d.name, dir: d.isDirectory() }))
-      .sort((a, b) => {
-        if (a.dir !== b.dir) return a.dir ? -1 : 1;
-        return a.name.localeCompare(b.name);
-      });
+    const visible = dirents.filter((d) => !this._shouldIgnore(path.join(abs, d.name), entry.root, entry.ignores));
+    const mapped = await Promise.all(visible.map(async (d) => {
+      const node = { name: d.name, dir: d.isDirectory() };
+      if (node.dir) node.empty = await this._isDirEmpty(path.join(abs, d.name), entry.root, entry.ignores);
+      return node;
+    }));
+    return mapped.sort((a, b) => {
+      if (a.dir !== b.dir) return a.dir ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+  }
+
+  async _isDirEmpty(absDir, root, ignores) {
+    try {
+      const kids = await fs.promises.readdir(absDir, { withFileTypes: true });
+      return !kids.some((k) => !this._shouldIgnore(path.join(absDir, k.name), root, ignores));
+    } catch {
+      return true;
+    }
+  }
+
+  async readFile(sid, relPath) {
+    const entry = this.watchers.get(sid);
+    if (!entry) return null;
+    const abs = path.resolve(entry.root, relPath || '.');
+    const rel = path.relative(entry.root, abs);
+    if (rel.startsWith('..') || path.isAbsolute(rel)) return null;
+    try {
+      const st = await fs.promises.stat(abs);
+      if (!st.isFile()) return null;
+      const MAX = 512 * 1024;
+      if (st.size > MAX) {
+        const fd = await fs.promises.open(abs, 'r');
+        const buf = Buffer.alloc(MAX);
+        await fd.read(buf, 0, MAX, 0);
+        await fd.close();
+        return { path: relPath, size: st.size, truncated: true, content: buf.toString('utf8') };
+      }
+      const content = await fs.promises.readFile(abs, 'utf8');
+      return { path: relPath, size: st.size, truncated: false, content };
+    } catch {
+      return null;
+    }
   }
 
   _buildIgnores(root) {

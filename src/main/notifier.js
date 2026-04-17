@@ -1,8 +1,9 @@
 const { Notification } = require('electron');
 
 class Notifier {
-  constructor({ onClick }) {
+  constructor({ onClick, onAttention }) {
     this.onClick = onClick;
+    this.onAttention = onAttention;
     this.lastFired = new Map();
   }
 
@@ -31,6 +32,8 @@ class Notifier {
       default:
         return;
     }
+
+    this.onAttention?.(id, state);
 
     if (!Notification.isSupported()) return;
     const n = new Notification({ title, body, silent: false });

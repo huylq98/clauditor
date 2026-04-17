@@ -22,6 +22,7 @@
       el.className = `tab${s.id === state.activeId ? ' active' : ''}`;
       el.dataset.sessionId = s.id;
       el.setAttribute('role', 'tab');
+      el.title = 'Double-click or right-click to rename';
       el.innerHTML = `
         <span class="status-dot ${s.state || ''}"></span>
         <span class="tab-name">${escapeHtml(s.name)}</span>
@@ -35,6 +36,11 @@
         }
       };
       el.ondblclick = (e) => {
+        if (e.target.classList.contains('tab-close')) return;
+        e.preventDefault();
+        startRename(s.id, el);
+      };
+      el.oncontextmenu = (e) => {
         if (e.target.classList.contains('tab-close')) return;
         e.preventDefault();
         startRename(s.id, el);
