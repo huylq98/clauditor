@@ -19,5 +19,8 @@ contextBridge.exposeInMainWorld('clauditor', {
 });
 
 if (process.env.CLAUDITOR_TEST === '1') {
-  contextBridge.exposeInMainWorld('__clauditorTestBridge', { enabled: true });
+  contextBridge.exposeInMainWorld('__clauditorTestBridge', {
+    enabled: true,
+    trayItems: () => ipcRenderer.invoke('__test:tray-items'),
+  });
 }

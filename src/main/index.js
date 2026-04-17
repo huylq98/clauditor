@@ -102,6 +102,10 @@ async function bootstrap() {
     onQuit: () => { quitting = true; app.quit(); },
   });
   tray.start();
+
+  if (process.env.CLAUDITOR_TEST === '1') {
+    ipcMain.handle('__test:tray-items', () => tray.menuLabels?.() || []);
+  }
 }
 
 ipcMain.handle('sessions:list', () => {
