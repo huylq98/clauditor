@@ -8,6 +8,8 @@ const { HookServer } = require('./hook-server');
 const { Notifier } = require('./notifier');
 const { TrayController } = require('./tray');
 const settingsInstaller = require('./settings-installer');
+const { FileWatcher } = require('./file-watcher');
+const { FileActivityService } = require('./file-activity-service');
 
 const TOKEN = crypto.randomBytes(24).toString('hex');
 process.env.CLAUDITOR_TOKEN = TOKEN;
@@ -19,6 +21,9 @@ let stateEngine = null;
 let hookServer = null;
 let notifier = null;
 let quitting = false;
+let fileWatcher = null;
+let activityService = null;
+let activityTick = null;
 
 function broadcast(channel, ...args) {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -68,6 +73,17 @@ async function bootstrap() {
   ptyManager = new PTYManager({ token: TOKEN });
   stateEngine = new StateEngine();
   hookServer = new HookServer({ token: TOKEN, stateEngine, ptyManager });
+  fileWatcher = new FileWatcher();
+  activityService = new FileActivityService();
+
+  fileWatcher.on('event', (sid, ev) => {
+    if (ev.type === 'add') activityService.markCreated(sid, ev.path);
+    if (ev.type === 'unlink') activityService.markDeleted(sid, ev.path);
+    broadcast('tree:event', sid, ev);
+  });
+  hookServer.on('file-activity', (ev) => activityService.handle(ev));
+  activityService.on('delta', (sid, delta) => broadcast('activity:delta', sid, delta));
+  activityTick = setInterval(() => activityService.tick(), 500);
   await hookServer.start();
 
   settingsInstaller.install();
@@ -76,6 +92,10 @@ async function bootstrap() {
 
   ptyManager.on('spawn', (session) => {
     stateEngine.register(session.id);
+    fileWatcher.create(session.id, session.cwd).catch((err) => {
+      console.error('[clauditor] watcher create failed:', err);
+    });
+    activityService.register(session.id);
     broadcast('session:created', session);
     pushTrayUpdate();
   });
@@ -83,6 +103,8 @@ async function bootstrap() {
   ptyManager.on('rename', (session) => { broadcast('session:renamed', session); pushTrayUpdate(); });
   ptyManager.on('exit', (id, code) => {
     stateEngine.markExited(id);
+    fileWatcher.destroy(id).catch(() => {});
+    activityService.unregister(id);
     broadcast('session:exit', id, code);
   });
 
@@ -136,6 +158,8 @@ ipcMain.handle('sessions:rename', (_e, id, name) => ptyManager.rename(id, name))
 ipcMain.handle('sessions:write', (_e, id, data) => { ptyManager.write(id, data); return true; });
 ipcMain.handle('sessions:resize', (_e, id, cols, rows) => { ptyManager.resize(id, cols, rows); return true; });
 ipcMain.handle('sessions:buffer', (_e, id) => ptyManager.getBuffer(id));
+ipcMain.handle('tree:list', (_e, sid, relPath) => fileWatcher.list(sid, relPath));
+ipcMain.handle('activity:snapshot', (_e, sid) => activityService.snapshot(sid));
 
 app.whenReady().then(async () => {
   await bootstrap();
@@ -155,6 +179,11 @@ app.on('before-quit', async (e) => {
     settingsInstaller.uninstall();
     ptyManager?.killAll();
     await hookServer?.stop();
+    if (activityTick) clearInterval(activityTick);
+    if (fileWatcher) {
+      const sids = [...(fileWatcher.watchers?.keys() || [])];
+      await Promise.all(sids.map((sid) => fileWatcher.destroy(sid)));
+    }
     tray?.destroy();
   } finally {
     app.exit(0);
