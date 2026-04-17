@@ -5,5 +5,6 @@ out/
 .DS_Store
 .claude/
 .superpowers/
+docs/superpowers/
 test-results/
 playwright-report/
