@@ -4,6 +4,8 @@ contextBridge.exposeInMainWorld('clauditor', {
   listSessions: () => ipcRenderer.invoke('sessions:list'),
   createSession: (opts) => ipcRenderer.invoke('sessions:create', opts || {}),
   killSession: (id) => ipcRenderer.invoke('sessions:kill', id),
+  forgetSession: (id) => ipcRenderer.invoke('sessions:forget', id),
+  restartSession: (id, dims) => ipcRenderer.invoke('sessions:restart', id, dims),
   renameSession: (id, name) => ipcRenderer.invoke('sessions:rename', id, name),
   write: (id, data) => ipcRenderer.invoke('sessions:write', id, data),
   resize: (id, cols, rows) => ipcRenderer.invoke('sessions:resize', id, cols, rows),

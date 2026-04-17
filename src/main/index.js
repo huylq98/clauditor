@@ -220,6 +220,24 @@ ipcMain.handle('sessions:rename', (_e, id, name) => ptyManager.rename(id, name))
 ipcMain.handle('sessions:write', (_e, id, data) => { ptyManager.write(id, data); stateEngine.noteActivity(id); return true; });
 ipcMain.handle('sessions:resize', (_e, id, cols, rows) => { ptyManager.resize(id, cols, rows); return true; });
 ipcMain.handle('sessions:buffer', (_e, id) => ptyManager.getBuffer(id));
+ipcMain.handle('sessions:forget', async (_e, id) => {
+  const s = ptyManager.sessions.get(id);
+  if (s?.proc) { try { s.proc.kill(); } catch (e) {} }
+  ptyManager.sessions.delete(id);
+  fileWatcher.destroy(id).catch(() => {});
+  activityService.unregister(id);
+  await store.remove(id);
+  return true;
+});
+ipcMain.handle('sessions:restart', (_e, id, dims) => {
+  const desc = ptyManager.restart(id, dims || {});
+  if (desc) {
+    stateEngine._set(id, 'running');
+    stateEngine._armIdle(id);
+    return desc;
+  }
+  return null;
+});
 ipcMain.handle('tree:list', (_e, sid, relPath) => fileWatcher.list(sid, relPath));
 ipcMain.handle('file:read', (_e, sid, relPath) => fileWatcher.readFile(sid, relPath));
 ipcMain.handle('activity:snapshot', (_e, sid) => activityService.snapshot(sid));
