@@ -5,11 +5,38 @@ const FILE_NAME = 'sessions.json';
 const VERSION = 1;
 
 class SessionStore {
-  constructor({ userDataDir }) {
+  constructor({ userDataDir, debounceMs = 500 }) {
     this.file = path.join(userDataDir, FILE_NAME);
     this.tmp = `${this.file}.tmp`;
+    this.debounceMs = debounceMs;
     this._dirtyTimer = null;
     this._snapshot = () => [];
+  }
+
+  setSnapshot(fn) {
+    this._snapshot = fn;
+  }
+
+  markDirty() {
+    if (this._dirtyTimer) return;
+    this._dirtyTimer = setTimeout(() => {
+      this._dirtyTimer = null;
+      const records = this._snapshot();
+      this.saveNow(records).catch((err) => {
+        console.error('[session-store] flush failed:', err);
+      });
+    }, this.debounceMs);
+  }
+
+  flushSync() {
+    if (this._dirtyTimer) {
+      clearTimeout(this._dirtyTimer);
+      this._dirtyTimer = null;
+    }
+    const records = this._snapshot();
+    const payload = JSON.stringify({ version: VERSION, sessions: records });
+    fs.writeFileSync(this.tmp, payload, 'utf8');
+    fs.renameSync(this.tmp, this.file);
   }
 
   async load() {
