@@ -5,8 +5,6 @@ test('app launches and renderer reaches complete state', async () => {
   const { electronApp, window } = await launchApp();
   try {
     await window.waitForFunction(() => document.readyState === 'complete');
-    const ready = await window.evaluate(() => document.readyState);
-    expect(ready).toBe('complete');
 
     // Root layout containers from index.html exist
     await expect(window.locator('#session-list')).toBeAttached();

@@ -17,9 +17,14 @@ async function launchApp(extraEnv = {}) {
     },
     timeout: 20_000,
   });
-  const window = await electronApp.firstWindow();
-  await window.waitForLoadState('domcontentloaded');
-  return { electronApp, window };
+  try {
+    const window = await electronApp.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+    return { electronApp, window };
+  } catch (err) {
+    await electronApp.close().catch(() => {});
+    throw err;
+  }
 }
 
 module.exports = { launchApp };

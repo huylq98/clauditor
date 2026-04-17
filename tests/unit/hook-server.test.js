@@ -1,3 +1,4 @@
+// Uses the fixed hook-server port; safe only while playwright.config.js pins workers:1.
 const { test, expect } = require('@playwright/test');
 const http = require('http');
 const { HookServer, PORT } = require('../../src/main/hook-server.js');
