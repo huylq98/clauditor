@@ -174,6 +174,7 @@ async function closeSession(id) {
   sessions.delete(id);
   tabBar.remove(id);
   sidebar.removeSession(id);
+  api.forgetSession?.(id);
   if (activeId === id) {
     const first = sessions.keys().next().value || null;
     await selectSession(first);
@@ -199,15 +200,13 @@ killBtn.onclick = async () => {
   const s = sessions.get(activeId);
   if (!s) return;
   if (s.state === 'exited') {
-    const created = await api.createSession({ cwd: s.cwd, name: s.name });
-    if (created) {
-      const old = sessions.get(activeId);
-      if (old?.el) old.el.remove();
-      sessions.delete(activeId);
-      tabBar.remove(activeId);
-      sidebar.removeSession(activeId);
-      const entry = ensureSession(created);
-      selectSession(entry.id);
+    const { cols, rows } = probeDims();
+    const restarted = await api.restartSession(activeId, { cols, rows });
+    if (restarted) {
+      s.state = 'running';
+      updatePill('running');
+      tabBar.setState(activeId, 'running');
+      s.term.focus();
     }
   } else {
     api.killSession(activeId);
