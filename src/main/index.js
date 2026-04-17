@@ -184,6 +184,20 @@ async function bootstrap() {
     onNewSession: () => { focusSession(null); broadcast('ui:new-session'); },
     onFocusSession: focusSession,
     onQuit: () => { quitting = true; app.quit(); },
+    onKillAll: () => {
+      const running = [...ptyManager.sessions.values()].filter((s) => s.proc).length;
+      if (running === 0) return;
+      const choice = dialog.showMessageBoxSync(mainWindow, {
+        type: 'warning',
+        buttons: ['Cancel', `Kill ${running}`],
+        defaultId: 0,
+        cancelId: 0,
+        message: `Kill ${running} running session${running === 1 ? '' : 's'}?`,
+      });
+      if (choice === 1) doKillAll();
+    },
+    onRestartAll: () => doRestartAllExited({}),
+    onForgetAll: () => doForgetAllExited(),
   });
   tray.start();
 
