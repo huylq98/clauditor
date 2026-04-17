@@ -1,6 +1,8 @@
 /* global window, document */
 (function () {
   const listEl = document.getElementById('tab-list');
+  const menuBtn = document.getElementById('session-menu-btn');
+  let openMenu = null;
 
   const state = {
     sessions: new Map(),     // id -> { id, name, state }
@@ -8,6 +10,9 @@
     onSelect: () => {},
     onClose: () => {},
     onRename: () => {},
+    onKillAll: () => {},
+    onRestartAllExited: () => {},
+    onForgetAllExited: () => {},
   };
 
   function escapeHtml(s) {
@@ -70,6 +75,64 @@
     };
     input.onblur = () => commit(true);
   }
+
+  function closeBulkMenu() {
+    if (!openMenu) return;
+    openMenu.remove();
+    openMenu = null;
+    menuBtn?.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('mousedown', onOutsideClick, true);
+    document.removeEventListener('keydown', onMenuKey, true);
+  }
+
+  function onOutsideClick(e) {
+    if (!openMenu) return;
+    if (openMenu.contains(e.target) || e.target === menuBtn) return;
+    closeBulkMenu();
+  }
+
+  function onMenuKey(e) {
+    if (e.key === 'Escape') { e.preventDefault(); closeBulkMenu(); }
+  }
+
+  function countsBySide() {
+    let running = 0, exited = 0;
+    for (const s of state.sessions.values()) {
+      if (s.state === 'exited') exited++;
+      else running++;
+    }
+    return { running, exited };
+  }
+
+  function openBulkMenu() {
+    if (openMenu) { closeBulkMenu(); return; }
+    const { running, exited } = countsBySide();
+    const tabbar = menuBtn.parentElement;
+    const menu = document.createElement('div');
+    menu.className = 'tab-menu';
+    menu.setAttribute('role', 'menu');
+    menu.innerHTML = `
+      <button class="tab-menu-item" data-action="kill"    ${running === 0 ? 'disabled' : ''}>Kill ${running} running</button>
+      <button class="tab-menu-item" data-action="restart" ${exited  === 0 ? 'disabled' : ''}>Restart ${exited} exited</button>
+      <button class="tab-menu-item" data-action="forget"  ${exited  === 0 ? 'disabled' : ''}>Close ${exited} exited</button>
+    `;
+    menu.addEventListener('click', (e) => {
+      const btn = e.target.closest('.tab-menu-item');
+      if (!btn || btn.hasAttribute('disabled')) return;
+      const action = btn.dataset.action;
+      closeBulkMenu();
+      if (action === 'kill') state.onKillAll();
+      else if (action === 'restart') state.onRestartAllExited();
+      else if (action === 'forget') state.onForgetAllExited();
+    });
+    tabbar.appendChild(menu);
+    openMenu = menu;
+    menuBtn.setAttribute('aria-expanded', 'true');
+    document.addEventListener('mousedown', onOutsideClick, true);
+    document.addEventListener('keydown', onMenuKey, true);
+  }
+
+  if (menuBtn) menuBtn.addEventListener('click', openBulkMenu);
 
   function keyHandler(e) {
     if (!(e.ctrlKey || e.metaKey)) return;

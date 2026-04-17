@@ -61,3 +61,28 @@ test('restart spawns new proc, preserves id and buffer', () => {
     else process.env.CLAUDITOR_CLI_OVERRIDE = originalOverride;
   }
 });
+
+test('registering + restarting multiple stubs in sequence preserves ids', () => {
+  const originalOverride = process.env.CLAUDITOR_CLI_OVERRIDE;
+  process.env.CLAUDITOR_CLI_OVERRIDE = process.platform === 'win32' ? 'cmd.exe' : '/bin/sh';
+  try {
+    const mgr = new PTYManager({ token: 't' });
+    const ids = ['bulk-a', 'bulk-b', 'bulk-c'];
+    for (const id of ids) {
+      mgr.registerStub({ id, name: id, cwd: process.cwd(), createdAt: 1, buffer: '' });
+    }
+    const events = [];
+    mgr.on('restart', (desc) => events.push(desc.id));
+    for (const id of ids) mgr.restart(id, { cols: 80, rows: 24 });
+    expect(events).toEqual(ids);
+    for (const id of ids) {
+      const s = mgr.sessions.get(id);
+      expect(s.proc).not.toBe(null);
+      expect(s.pid).not.toBe(null);
+    }
+    for (const id of ids) mgr.kill(id);
+  } finally {
+    if (originalOverride === undefined) delete process.env.CLAUDITOR_CLI_OVERRIDE;
+    else process.env.CLAUDITOR_CLI_OVERRIDE = originalOverride;
+  }
+});

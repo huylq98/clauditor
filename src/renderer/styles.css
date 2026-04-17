@@ -373,6 +373,7 @@ body::before {
   background: var(--obsidian);
   border-bottom: 1px solid var(--rule);
   overflow: hidden;
+  position: relative;
 }
 #tab-list {
   display: flex;
@@ -419,17 +420,54 @@ body::before {
   font: inherit;
   width: 120px;
 }
-#new-session {
+#new-session, #session-menu-btn {
   flex-shrink: 0;
-  background: transparent;
-  color: var(--dust);
-  border: 1px dashed var(--rule);
+  background: var(--graphite-raised);
+  color: var(--ivory);
+  border: 1px solid var(--rule);
   border-radius: 3px;
-  padding: 3px 10px;
+  padding: 4px 12px;
   font: 500 12px "IBM Plex Sans", system-ui, sans-serif;
   cursor: pointer;
+  transition: all 120ms ease;
 }
-#new-session:hover { color: var(--ember); border-color: var(--ember); }
+#new-session { border-left: 2px solid var(--ember); }
+#new-session:hover, #session-menu-btn:hover {
+  background: var(--ink);
+  border-color: var(--ember);
+  color: var(--ember);
+}
+#session-menu-btn {
+  padding: 4px 8px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.tab-menu {
+  position: absolute;
+  top: 36px;
+  right: 8px;
+  min-width: 200px;
+  background: var(--obsidian);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 30;
+  padding: 4px 0;
+  font: 400 12px "IBM Plex Sans", system-ui, sans-serif;
+}
+.tab-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--ivory);
+  padding: 6px 14px;
+  cursor: pointer;
+}
+.tab-menu-item:hover:not([disabled]) { background: var(--graphite-raised); color: var(--ember); }
+.tab-menu-item[disabled] { color: var(--fog); cursor: not-allowed; opacity: 0.6; }
 
 /* ─── Sidebar search / tree / activity ───────────────── */
 #sidebar {

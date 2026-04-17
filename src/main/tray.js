@@ -10,16 +10,28 @@ function mostUrgent(states) {
 }
 
 class TrayController {
-  constructor({ onShow, onNewSession, onFocusSession, onQuit, iconPath }) {
+  constructor({ onShow, onNewSession, onFocusSession, onQuit, onKillAll, onRestartAll, onForgetAll, iconPath }) {
     this.onShow = onShow;
     this.onNewSession = onNewSession;
     this.onFocusSession = onFocusSession;
     this.onQuit = onQuit;
+    this.onKillAll = onKillAll;
+    this.onRestartAll = onRestartAll;
+    this.onForgetAll = onForgetAll;
     this.iconPath = iconPath;
     this.tray = null;
     this.sessions = [];
     this.states = {};
     this._menuLabels = [];
+  }
+
+  _counts(sessions, states) {
+    let running = 0, exited = 0;
+    for (const s of sessions) {
+      if (states[s.id] === 'exited') exited++;
+      else running++;
+    }
+    return { running, exited };
   }
 
   start() {
@@ -46,11 +58,29 @@ class TrayController {
       click: () => this.onFocusSession?.(s.id),
     }));
 
+    const counts = this._counts(this.sessions, this.states);
+
     const menu = Menu.buildFromTemplate([
       { label: 'Show Dashboard', click: () => this.onShow?.() },
       { type: 'separator' },
       { label: `Status: ${urgent}`, enabled: false },
       ...(sessionItems.length ? sessionItems : [{ label: 'No sessions', enabled: false }]),
+      { type: 'separator' },
+      {
+        label: `Kill ${counts.running} running`,
+        enabled: counts.running > 0,
+        click: () => this.onKillAll?.(),
+      },
+      {
+        label: `Restart ${counts.exited} exited`,
+        enabled: counts.exited > 0,
+        click: () => this.onRestartAll?.(),
+      },
+      {
+        label: `Close ${counts.exited} exited`,
+        enabled: counts.exited > 0,
+        click: () => this.onForgetAll?.(),
+      },
       { type: 'separator' },
       { label: 'New Session', click: () => this.onNewSession?.() },
       { label: 'Quit', click: () => this.onQuit?.() },

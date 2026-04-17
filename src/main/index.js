@@ -184,6 +184,20 @@ async function bootstrap() {
     onNewSession: () => { focusSession(null); broadcast('ui:new-session'); },
     onFocusSession: focusSession,
     onQuit: () => { quitting = true; app.quit(); },
+    onKillAll: () => {
+      const running = [...ptyManager.sessions.values()].filter((s) => s.proc).length;
+      if (running === 0) return;
+      const choice = dialog.showMessageBoxSync(mainWindow, {
+        type: 'warning',
+        buttons: ['Cancel', `Kill ${running}`],
+        defaultId: 0,
+        cancelId: 0,
+        message: `Kill ${running} running session${running === 1 ? '' : 's'}?`,
+      });
+      if (choice === 1) doKillAll();
+    },
+    onRestartAll: () => doRestartAllExited({}),
+    onForgetAll: () => doForgetAllExited(),
   });
   tray.start();
 
@@ -238,6 +252,60 @@ ipcMain.handle('sessions:restart', (_e, id, dims) => {
   }
   return null;
 });
+
+function doKillAll() {
+  let killed = 0;
+  for (const s of ptyManager.sessions.values()) {
+    if (s.proc) {
+      try { s.proc.kill(); } catch (e) {}
+      killed++;
+    }
+  }
+  return { killed };
+}
+
+ipcMain.handle('sessions:killAll', () => doKillAll());
+
+function doRestartAllExited(dims) {
+  const ids = [];
+  for (const [id] of ptyManager.sessions) {
+    if (stateEngine.get(id) === 'exited') ids.push(id);
+  }
+  let restarted = 0;
+  for (const id of ids) {
+    const desc = ptyManager.restart(id, dims || {});
+    if (desc) {
+      stateEngine._set(id, 'running');
+      stateEngine._armIdle(id);
+      restarted++;
+    }
+  }
+  return { restarted };
+}
+
+ipcMain.handle('sessions:restartAllExited', (_e, dims) => doRestartAllExited(dims));
+
+async function doForgetAllExited() {
+  const ids = [];
+  for (const [id] of ptyManager.sessions) {
+    if (stateEngine.get(id) === 'exited') ids.push(id);
+  }
+  for (const id of ids) {
+    const s = ptyManager.sessions.get(id);
+    if (s?.proc) { try { s.proc.kill(); } catch (e) {} }
+    ptyManager.sessions.delete(id);
+    fileWatcher.destroy(id).catch(() => {});
+    activityService.unregister(id);
+    broadcast('session:forgotten', id);
+  }
+  if (store) {
+    try { store.flushSync(); } catch (e) { console.error('[clauditor] flushSync after forgetAll failed:', e); }
+  }
+  return { forgotten: ids.length };
+}
+
+ipcMain.handle('sessions:forgetAllExited', () => doForgetAllExited());
+
 ipcMain.handle('tree:list', (_e, sid, relPath) => fileWatcher.list(sid, relPath));
 ipcMain.handle('file:read', (_e, sid, relPath) => fileWatcher.readFile(sid, relPath));
 ipcMain.handle('activity:snapshot', (_e, sid) => activityService.snapshot(sid));
