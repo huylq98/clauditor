@@ -1,30 +1,56 @@
+<div align="center">
+
 # Clauditor
 
-A desktop manager for running multiple [Claude Code](https://docs.claude.com/en/docs/claude-code/overview) sessions side by side. Clauditor wraps the official `claude` CLI in a PTY, gives each session its own tab, and surfaces what's happening across them — file edits, permission prompts, idle state — without you having to babysit each terminal.
+### Run Claude Code sessions in parallel without losing your mind.
 
-## Status
+**One window. Many sessions. Zero tab chaos.**
 
-Early development. Usable day-to-day; expect rough edges and breaking changes.
+[![License: MIT](https://img.shields.io/badge/License-MIT-ec8469.svg)](./LICENSE)
+[![CI](https://github.com/huylq98/clauditor/actions/workflows/ci.yml/badge.svg)](https://github.com/huylq98/clauditor/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/huylq98/clauditor?color=ec8469)](https://github.com/huylq98/clauditor/releases)
+[![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-8ba668)](https://github.com/huylq98/clauditor/releases)
+[![Stars](https://img.shields.io/github/stars/huylq98/clauditor?style=social)](https://github.com/huylq98/clauditor/stargazers)
 
-## Features
+<!-- Drop a screenshot or animated GIF into docs/screenshots/hero.png and uncomment -->
+<!-- <img src="docs/screenshots/hero.png" alt="Clauditor hero" width="860" /> -->
 
-- **Tabbed sessions** — open multiple Claude Code sessions in one window, each in its own cwd.
-- **Per-session state** — `running`, `awaiting_user`, `awaiting_permission`, `idle`, `exited`, tracked from Claude Code hooks.
-- **Desktop notifications + taskbar flash** — know when a session needs your attention even if you're in another app.
-- **File tree sidebar** — per-session live view of the working directory, with modification / creation badges driven by Claude Code tool events.
-- **Activity log** — rolling feed of file reads/writes/edits/deletes.
-- **Click-to-preview files** — open any file from the tree in a read-only overlay.
-- **System tray** — quick access to active sessions; minimize-to-tray instead of quitting.
-- **Keyboard shortcuts** — `Ctrl+T` new session, `Ctrl+W` close, `Ctrl+1..9` switch tabs, `Ctrl+Tab` cycle.
-- **Rename sessions** — double-click or right-click a tab.
+</div>
 
-## Requirements
+---
 
-- Node.js 20+
-- The `claude` CLI on your `PATH` ([install instructions](https://docs.claude.com/en/docs/claude-code/setup))
-- Windows 10/11, macOS 12+, or Linux
+## The problem
 
-## Install and run (from source)
+You started one Claude Code session. Then another, for a second repo. Then a third, because the first one was busy refactoring while the second was hunting a bug. Now you have five terminal windows, you can't remember which is which, one of them has been waiting on a permission prompt for ten minutes, and another finished twenty minutes ago and you never noticed.
+
+**Clauditor fixes that.**
+
+## What it gives you
+
+- **Every session in one window.** Open as many Claude Code sessions as you need, each pinned to its own working directory, all tabbed in a single Electron app.
+- **Live state at a glance.** Each tab shows whether Claude is *running*, *waiting for permission*, *waiting for your reply*, *idle*, or *exited* — driven by Claude Code's own lifecycle hooks, not screen-scraping.
+- **It tells you when something needs you.** Desktop notifications + taskbar flashing when a backgrounded session needs permission or input. Click the notification, you land on the right tab.
+- **See what Claude is touching.** A per-session file tree lights up files as Claude reads, writes, edits, or deletes them, with a rolling activity log.
+- **Click any file for a quick preview.** Read-only overlay, no context switch to your editor.
+- **System tray.** Close the window, Clauditor keeps running; the tray menu lists every live session with its state.
+
+## Why it's different
+
+Not a web UI. Not a wrapper that re-implements Claude Code. Clauditor **spawns the real `claude` CLI in a real PTY** — everything you can do in a plain terminal works here, with the same keystrokes, the same colors, the same tools. Clauditor just adds the coordination layer on top: tabs, state tracking, file intelligence, notifications.
+
+## Install
+
+### Pre-built binaries
+
+Grab the latest installer from the [**Releases page**](https://github.com/huylq98/clauditor/releases/latest):
+
+| Platform | Artifact |
+|----------|----------|
+| Windows  | `.exe` (NSIS installer) |
+| macOS    | `.dmg` |
+| Linux    | `.AppImage` |
+
+### From source
 
 ```bash
 git clone https://github.com/huylq98/clauditor.git
@@ -33,59 +59,104 @@ npm install
 npm start
 ```
 
-## Build a distributable
+**Requirements:** Node.js 20+ and the [`claude` CLI](https://docs.claude.com/en/docs/claude-code/setup) on your `PATH`.
 
-```bash
-npm run dist
-```
+## Keyboard shortcuts
 
-Outputs go to `dist/`. Targets are defined in `package.json > build`: NSIS installer on Windows, DMG on macOS, AppImage on Linux.
+| Shortcut          | Action                    |
+|-------------------|---------------------------|
+| `Ctrl+T`          | New session               |
+| `Ctrl+W`          | Close active session      |
+| `Ctrl+1` … `Ctrl+9` | Jump to session 1–9     |
+| `Ctrl+Tab`        | Cycle forward             |
+| `Ctrl+Shift+Tab`  | Cycle backward            |
+| Double-click tab  | Rename session            |
+| Right-click tab   | Rename session            |
 
-## Tests
+## How it works
 
-```bash
-npm test              # full suite (Playwright-driven: unit + pty + e2e)
-npm run test:unit     # pure unit tests
-npm run test:pty      # PTY manager tests
-npm run test:e2e      # end-to-end via launched Electron window
-```
+<details>
+<summary>Click for the architecture tour</summary>
 
-## Architecture
+### The hook trick
+
+When Clauditor launches, it installs a small block of hooks into your Claude Code settings (`~/.claude/settings.json`) that POST to a local HTTP server on `127.0.0.1:27182`. Each session is spawned with a per-launch token and a session ID in its environment, so the server can attribute every hook to the right tab. Clauditor removes the hooks on quit.
+
+### Layout
 
 ```
 src/
-  main/            Electron main process
-    index.js             app lifecycle, IPC handlers, wiring
-    pty-manager.js       spawns + manages claude PTYs
-    state-engine.js      per-session state machine
-    hook-server.js       HTTP server that Claude Code hooks post to
-    notifier.js          desktop notifications + attention signals
-    file-watcher.js      chokidar-backed tree + file reads
-    file-activity-service.js   aggregates Read/Write/Edit activity
-    settings-installer.js      installs Claude Code hooks into user settings
-    tray.js              system tray menu
-  preload/
-    preload.js           contextBridge API surface
-  renderer/
-    renderer.js          orchestration glue
-    components/
-      tabbar.js            tabs, keyboard nav, rename
-      sidebar.js           search + file tree + activity panel + preview
-      tree.js              pure tree-flattening logic
-    styles.css
-    index.html
-assets/
-  tray-icon.png
+├── main/                     Electron main process
+│   ├── index.js              app lifecycle, IPC, wiring
+│   ├── pty-manager.js        spawns + manages claude PTYs
+│   ├── state-engine.js       per-session state machine
+│   ├── hook-server.js        receives Claude Code hooks
+│   ├── notifier.js           toasts + taskbar flash
+│   ├── file-watcher.js       chokidar-backed tree + file reads
+│   ├── file-activity-service.js    aggregates Read/Write/Edit activity
+│   ├── settings-installer.js installs/removes Claude Code hooks
+│   └── tray.js               system tray
+├── preload/preload.js        contextBridge API
+└── renderer/
+    ├── renderer.js           orchestration
+    ├── components/
+    │   ├── tabbar.js         tabs, shortcuts, rename
+    │   ├── sidebar.js        search + tree + activity + preview
+    │   └── tree.js           pure tree-flattening logic
+    ├── styles.css
+    └── index.html
 ```
 
-### How state tracking works
+### Session states
 
-Clauditor installs a small block of hooks into the user's Claude Code settings (`~/.claude/settings.json`) pointing at a local HTTP server on `127.0.0.1:27182` with a per-launch token. Each Claude Code process Clauditor spawns sets `CLAUDITOR_SESSION_ID` and `CLAUDITOR_TOKEN` in its environment, and the hooks forward lifecycle events (`user-prompt-submit`, `pre-tool-use`, `post-tool-use`, `stop`, `notification`) to the hook server. The state engine maps those hooks to per-session states. When the app exits, the installer removes the hooks.
+```
+running ──(stop)──────────────▶ awaiting_user
+  ▲                                │
+  │                            (user input)
+  │                                ▼
+idle ◀─(5 min)── (any) ────────▶ running
+  │                                ▲
+  ▲                            (post-tool-use)
+  │                                │
+  └── awaiting_permission ◀──(notification hook)
+```
 
-## Contributing
+</details>
 
-Issues and pull requests are welcome. For non-trivial changes, please open an issue first to discuss direction.
+## Roadmap
+
+- [ ] Persist session layout + names across restarts
+- [ ] Search across all session transcripts
+- [ ] Bulk actions (kill all, restart all)
+- [ ] Per-session themes / accent colors
+- [ ] Plugin API for custom side panels
+- [ ] Resumable sessions backed by Claude Code's session history
+
+Have a request? [**Open an issue**](https://github.com/huylq98/clauditor/issues/new).
+
+## Development
+
+```bash
+npm start              # launch in dev mode
+npm test               # full suite (unit + PTY + e2e)
+npm run test:unit      # unit tests only
+npm run dist           # build installers into dist/
+```
+
+PRs welcome. For anything non-trivial, open an issue first so we can align on direction before you spend time on code.
+
+## Built with
+
+[Electron](https://www.electronjs.org/) · [xterm.js](https://xtermjs.org/) · [@lydell/node-pty](https://github.com/lydell/node-pty) · [chokidar](https://github.com/paulmillr/chokidar) · [Playwright](https://playwright.dev/)
 
 ## License
 
-[MIT](./LICENSE)
+[MIT](./LICENSE) — do whatever you want, attribution appreciated.
+
+---
+
+<div align="center">
+
+**If Clauditor saves you time, [leave a star](https://github.com/huylq98/clauditor) — it genuinely helps.**
+
+</div>
