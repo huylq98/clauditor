@@ -76,12 +76,25 @@ async function bootstrap() {
   fileWatcher = new FileWatcher();
   activityService = new FileActivityService();
 
+  const toRel = (sid, abs) => {
+    if (!abs) return abs;
+    const desc = ptyManager.describe(sid);
+    if (!desc?.cwd) return abs;
+    const rel = path.relative(desc.cwd, abs);
+    if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) return abs;
+    return rel.split(path.sep).join('/');
+  };
+
   fileWatcher.on('event', (sid, ev) => {
-    if (ev.type === 'add') activityService.markCreated(sid, ev.path);
-    if (ev.type === 'unlink') activityService.markDeleted(sid, ev.path);
-    broadcast('tree:event', sid, ev);
+    const rel = toRel(sid, ev.path);
+    const relEv = { ...ev, path: rel };
+    if (ev.type === 'add') activityService.markCreated(sid, rel);
+    if (ev.type === 'unlink') activityService.markDeleted(sid, rel);
+    broadcast('tree:event', sid, relEv);
   });
-  hookServer.on('file-activity', (ev) => activityService.handle(ev));
+  hookServer.on('file-activity', (ev) => {
+    activityService.handle({ ...ev, path: toRel(ev.sid, ev.path) });
+  });
   activityService.on('delta', (sid, delta) => broadcast('activity:delta', sid, delta));
   activityTick = setInterval(() => activityService.tick(), 500);
   await hookServer.start();
