@@ -23,6 +23,15 @@ tabBar.init({
   onSelect: (id) => selectSession(id),
   onClose: (id) => closeSession(id),
   onRename: (id, name) => api.renameSession(id, name),
+  onKillAll: () => {
+    let running = 0;
+    for (const s of sessions.values()) if (s.state !== 'exited') running++;
+    if (running === 0) return;
+    if (!window.confirm(`Kill ${running} running session${running === 1 ? '' : 's'}?`)) return;
+    api.killAllSessions();
+  },
+  onRestartAllExited: () => {},
+  onForgetAllExited: () => {},
 });
 
 function createTerminal() {

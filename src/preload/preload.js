@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('clauditor', {
   killSession: (id) => ipcRenderer.invoke('sessions:kill', id),
   forgetSession: (id) => ipcRenderer.invoke('sessions:forget', id),
   restartSession: (id, dims) => ipcRenderer.invoke('sessions:restart', id, dims),
+  killAllSessions: () => ipcRenderer.invoke('sessions:killAll'),
   renameSession: (id, name) => ipcRenderer.invoke('sessions:rename', id, name),
   write: (id, data) => ipcRenderer.invoke('sessions:write', id, data),
   resize: (id, cols, rows) => ipcRenderer.invoke('sessions:resize', id, cols, rows),

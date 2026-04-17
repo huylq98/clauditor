@@ -238,6 +238,20 @@ ipcMain.handle('sessions:restart', (_e, id, dims) => {
   }
   return null;
 });
+
+function doKillAll() {
+  let killed = 0;
+  for (const s of ptyManager.sessions.values()) {
+    if (s.proc) {
+      try { s.proc.kill(); } catch (e) {}
+      killed++;
+    }
+  }
+  return { killed };
+}
+
+ipcMain.handle('sessions:killAll', () => doKillAll());
+
 ipcMain.handle('tree:list', (_e, sid, relPath) => fileWatcher.list(sid, relPath));
 ipcMain.handle('file:read', (_e, sid, relPath) => fileWatcher.readFile(sid, relPath));
 ipcMain.handle('activity:snapshot', (_e, sid) => activityService.snapshot(sid));
