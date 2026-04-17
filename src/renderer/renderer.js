@@ -106,6 +106,7 @@ function renderList() {
   for (const s of sessions.values()) {
     const li = document.createElement('li');
     li.className = `session-item${s.id === activeId ? ' active' : ''}`;
+    li.dataset.sessionId = s.id;
     li.innerHTML = `
       <span class="status-dot ${s.state}"></span>
       <span class="session-meta">
