@@ -121,15 +121,15 @@ class PTYManager extends EventEmitter {
   }
 
   write(id, data) {
-    this.sessions.get(id)?.proc.write(data);
+    const s = this.sessions.get(id);
+    if (!s || !s.proc) return;
+    s.proc.write(data);
   }
 
   resize(id, cols, rows) {
-    try {
-      this.sessions.get(id)?.proc.resize(cols, rows);
-    } catch (e) {
-      // PTY may be dead
-    }
+    const s = this.sessions.get(id);
+    if (!s || !s.proc) return;
+    try { s.proc.resize(cols, rows); } catch (e) {}
   }
 
   rename(id, name) {
@@ -142,11 +142,24 @@ class PTYManager extends EventEmitter {
   }
 
   kill(id) {
-    try {
-      this.sessions.get(id)?.proc.kill();
-    } catch (e) {
-      // already gone
-    }
+    const s = this.sessions.get(id);
+    if (!s || !s.proc) return;
+    try { s.proc.kill(); } catch (e) {}
+  }
+
+  registerStub(record) {
+    const session = {
+      id: record.id,
+      name: record.name || `session-${record.id.slice(0, 6)}`,
+      cwd: record.cwd,
+      pid: null,
+      proc: null,
+      buffer: record.buffer || '',
+      createdAt: record.createdAt || Date.now(),
+    };
+    this.sessions.set(session.id, session);
+    this.emit('spawn', this.describe(session.id));
+    return this.describe(session.id);
   }
 
   killAll() {
