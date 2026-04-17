@@ -10,6 +10,7 @@ const { TrayController } = require('./tray');
 const settingsInstaller = require('./settings-installer');
 const { FileWatcher } = require('./file-watcher');
 const { FileActivityService } = require('./file-activity-service');
+const { SessionStore } = require('./session-store');
 
 const TOKEN = crypto.randomBytes(24).toString('hex');
 process.env.CLAUDITOR_TOKEN = TOKEN;
@@ -28,6 +29,7 @@ let quitting = false;
 let fileWatcher = null;
 let activityService = null;
 let activityTick = null;
+let store = null;
 
 function broadcast(channel, ...args) {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -87,6 +89,20 @@ async function bootstrap() {
   fileWatcher = new FileWatcher();
   activityService = new FileActivityService();
 
+  store = new SessionStore({ userDataDir: process.env.CLAUDITOR_USER_DATA || app.getPath('userData') });
+  const savedRecords = await store.load();
+
+  store.setSnapshot(() => ptyManager.list().map((desc) => {
+    const s = ptyManager.sessions.get(desc.id);
+    return {
+      id: desc.id,
+      name: desc.name,
+      cwd: desc.cwd,
+      createdAt: desc.createdAt,
+      buffer: s?.buffer || '',
+    };
+  }));
+
   const toRel = (sid, abs) => {
     if (!abs) return abs;
     const desc = ptyManager.describe(sid);
@@ -140,6 +156,19 @@ async function bootstrap() {
     activityService.unregister(id);
     broadcast('session:exit', id, code);
   });
+
+  for (const rec of savedRecords) {
+    ptyManager.registerStub(rec);
+    stateEngine.register(rec.id);
+    fileWatcher.create(rec.id, rec.cwd).catch(() => {});
+    activityService.register(rec.id);
+    stateEngine.markExited(rec.id);
+  }
+
+  ptyManager.on('spawn', () => store.markDirty());
+  ptyManager.on('exit', () => store.markDirty());
+  ptyManager.on('rename', () => store.markDirty());
+  ptyManager.on('restart', () => store.markDirty());
 
   stateEngine.on('change', (id, next) => {
     broadcast('session:state', id, next);
@@ -211,6 +240,7 @@ app.on('before-quit', async (e) => {
   e.preventDefault();
   try {
     settingsInstaller.uninstall();
+    try { store?.flushSync(); } catch (e) { console.error('[clauditor] flushSync failed:', e); }
     ptyManager?.killAll();
     await hookServer?.stop();
     if (activityTick) clearInterval(activityTick);
