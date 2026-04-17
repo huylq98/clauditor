@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Clauditor">
+  <path d="M32 16 L52 32 L32 48 L12 32 Z" fill="#5a564e" opacity="0.35"/>
+  <path d="M32 12 L52 32 L32 48 L12 32 Z" fill="#a86a51" opacity="0.75"/>
+  <path d="M32 8 L52 28 L32 48 L12 28 Z" fill="#c98469"/>
+  <path d="M32 8 L52 28 L32 28 Z" fill="#d99a82" opacity="0.6"/>
+</svg>
