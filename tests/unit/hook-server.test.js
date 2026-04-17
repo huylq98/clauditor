@@ -4,11 +4,21 @@ const http = require('http');
 const { HookServer, PORT } = require('../../src/main/hook-server.js');
 const { StateEngine } = require('../../src/main/state-engine.js');
 
-let server, engine;
+let server, engine, ptyManager;
+
+function makePtyManager(map) {
+  return {
+    findIdByPid(pid) {
+      for (const [id, p] of Object.entries(map)) if (p === pid) return id;
+      return null;
+    },
+  };
+}
 
 test.beforeEach(async () => {
   engine = new StateEngine();
-  server = new HookServer({ token: 'secret', stateEngine: engine });
+  ptyManager = makePtyManager({ s1: 4242 });
+  server = new HookServer({ token: 'secret', stateEngine: engine, ptyManager });
   await server.start();
 });
 test.afterEach(async () => { await server.stop(); });
@@ -34,12 +44,33 @@ test('rejects request without token', async () => {
   expect(res.status).toBe(403);
 });
 
-test('accepts request with correct token and routes to engine', async () => {
+test('routes hook to session when ppid matches a tracked PTY', async () => {
+  engine.register('s1');
+  const res = await post('/hook/notification', { clauditor_ppid: 4242 },
+    { 'X-Clauditor-Token': 'secret' });
+  expect(res.status).toBe(200);
+  expect(JSON.parse(res.body).sid).toBe('s1');
+  expect(engine.get('s1')).toBe('awaiting_permission');
+});
+
+test('rejects hook when ppid does not match a tracked PTY', async () => {
+  // Simulates a grandchild Claude Code (e.g. launched from Antigravity) that
+  // inherited the env vars but runs under a different parent PID.
+  engine.register('s1');
+  const res = await post('/hook/notification', { clauditor_ppid: 9999 },
+    { 'X-Clauditor-Token': 'secret' });
+  expect(res.status).toBe(200);
+  expect(JSON.parse(res.body).sid).toBeNull();
+  expect(engine.get('s1')).toBe('running');
+});
+
+test('ignores legacy clauditor_session_id field without matching ppid', async () => {
   engine.register('s1');
   const res = await post('/hook/notification', { clauditor_session_id: 's1' },
     { 'X-Clauditor-Token': 'secret' });
   expect(res.status).toBe(200);
-  expect(engine.get('s1')).toBe('awaiting_permission');
+  expect(JSON.parse(res.body).sid).toBeNull();
+  expect(engine.get('s1')).toBe('running');
 });
 
 test('health endpoint also requires token', async () => {

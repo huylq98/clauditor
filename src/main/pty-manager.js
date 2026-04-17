@@ -112,6 +112,14 @@ class PTYManager extends EventEmitter {
     return this.sessions.get(id)?.buffer || '';
   }
 
+  findIdByPid(pid) {
+    if (!pid) return null;
+    for (const [id, s] of this.sessions) {
+      if (s.pid === pid) return id;
+    }
+    return null;
+  }
+
   write(id, data) {
     this.sessions.get(id)?.proc.write(data);
   }

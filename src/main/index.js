@@ -67,7 +67,7 @@ function pushTrayUpdate() {
 async function bootstrap() {
   ptyManager = new PTYManager({ token: TOKEN });
   stateEngine = new StateEngine();
-  hookServer = new HookServer({ token: TOKEN, stateEngine });
+  hookServer = new HookServer({ token: TOKEN, stateEngine, ptyManager });
   await hookServer.start();
 
   settingsInstaller.install();

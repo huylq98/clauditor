@@ -4,9 +4,10 @@ const bodyParser = require('body-parser');
 const PORT = 27182;
 
 class HookServer {
-  constructor({ token, stateEngine }) {
+  constructor({ token, stateEngine, ptyManager }) {
     this.token = token;
     this.stateEngine = stateEngine;
+    this.ptyManager = ptyManager;
     this.app = express();
     this.app.use(bodyParser.json({ limit: '2mb' }));
     this.app.use(bodyParser.text({ type: '*/*', limit: '2mb' }));
@@ -17,13 +18,17 @@ class HookServer {
       next();
     });
 
+    // Identify the owning Clauditor session by the hook process's parent PID
+    // (the Claude Code PID that invoked the hook). Env-var-based identity is
+    // unsafe because CLAUDITOR_SESSION_ID/TOKEN inherit to every descendant,
+    // so a grandchild Claude Code launched from inside a PTY would otherwise
+    // forge hooks attributed to its ancestor session.
     const handle = (hookName) => (req, res) => {
       const payload = typeof req.body === 'string' ? tryParse(req.body) : req.body || {};
-      const sid = payload.clauditor_session_id
-        || req.header('X-Clauditor-Session')
-        || process.env.CLAUDITOR_SESSION_ID;
+      const ppid = Number(payload.clauditor_ppid) || 0;
+      const sid = this.ptyManager?.findIdByPid(ppid) || null;
       if (sid) this.stateEngine.handleHook(sid, hookName);
-      res.json({ ok: true, sid: sid || null });
+      res.json({ ok: true, sid });
     };
 
     this.app.post('/hook/user-prompt-submit', handle('user-prompt-submit'));

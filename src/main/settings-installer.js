@@ -17,13 +17,19 @@ function hookScriptPath() {
   return path.join(claudeDir(), process.platform === 'win32' ? 'clauditor-hook.ps1' : 'clauditor-hook.sh');
 }
 
+// Identity is established by the PPID of this hook process (the Claude Code PID
+// that invoked it), not by CLAUDITOR_SESSION_ID — env vars leak to any descendant
+// process, so a grandchild Claude Code launched from within a Clauditor PTY
+// would otherwise hijack its ancestor's session identity.
 const PS1 = `param([string]$Endpoint)
 if (-not $env:CLAUDITOR_TOKEN) { exit 0 }
 try {
   $body = [Console]::In.ReadToEnd()
   if (-not $body) { $body = "{}" }
   try { $json = $body | ConvertFrom-Json } catch { $json = @{} }
-  $json | Add-Member -NotePropertyName clauditor_session_id -NotePropertyValue $env:CLAUDITOR_SESSION_ID -Force
+  $ppid = 0
+  try { $ppid = (Get-CimInstance Win32_Process -Filter "ProcessId=$PID" -ErrorAction Stop).ParentProcessId } catch {}
+  $json | Add-Member -NotePropertyName clauditor_ppid -NotePropertyValue $ppid -Force
   $out = $json | ConvertTo-Json -Compress
   Invoke-RestMethod -Uri "http://127.0.0.1:27182/hook/$Endpoint" \`
     -Method Post \`
@@ -37,7 +43,10 @@ const SH = `#!/bin/sh
 [ -z "$CLAUDITOR_TOKEN" ] && exit 0
 BODY=$(cat)
 [ -z "$BODY" ] && BODY="{}"
-PAYLOAD=$(printf '%s' "$BODY" | sed -e "s/}$/,\\"clauditor_session_id\\":\\"$CLAUDITOR_SESSION_ID\\"}/")
+case "$BODY" in
+  '{}') PAYLOAD="{\\"clauditor_ppid\\":$PPID}" ;;
+  *) PAYLOAD=$(printf '%s' "$BODY" | sed -e "s/}\\s*$/,\\"clauditor_ppid\\":$PPID}/") ;;
+esac
 curl -s -m 2 -X POST \\
   -H "Content-Type: application/json" \\
   -H "X-Clauditor-Token: $CLAUDITOR_TOKEN" \\
