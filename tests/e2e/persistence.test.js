@@ -30,10 +30,10 @@ test('persists sessions across relaunch and supports restart', async () => {
       { timeout: 5000 }
     );
 
-    // Cleanly exit fake-claude so the PTY closes before we quit Electron.
-    // node-pty's kill() on Windows can leave child procs lingering, which
-    // makes before-quit's Promise.all(fileWatcher.destroy) / hookServer.stop
-    // race against a zombie PTY and stall electronApp.close().
+    // fake-claude is a test fixture; tell it to exit cleanly via stdin before we
+    // quit Electron. Without this, node-pty's TerminateProcess leaves a zombie
+    // that makes Playwright's electronApp.close() flaky on Windows (~3/5 fail).
+    // This is a fixture concern; production quit path is unaffected.
     await window.evaluate((id) => window.clauditor.write(id, '__exit__\r\n'), session.id);
     await window.waitForFunction(
       (id) => {
@@ -44,8 +44,6 @@ test('persists sessions across relaunch and supports restart', async () => {
       { timeout: 5000 }
     );
   } finally {
-    // electronApp.close() internally calls app.quit() and awaits the app close
-    // event, which lets before-quit's flushSync() run and write sessions.json.
     await electronApp.close().catch(() => {});
   }
 
