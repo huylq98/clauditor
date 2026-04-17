@@ -5,29 +5,45 @@
   "main": "src/main/index.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "test": "playwright test",
+    "test:unit": "playwright test --project=unit",
+    "test:pty": "playwright test --project=pty",
+    "test:e2e": "playwright test --project=e2e"
   },
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@lydell/node-pty": "^1.1.0",
     "body-parser": "^1.20.3",
     "express": "^4.21.2",
-    "@lydell/node-pty": "^1.1.0",
     "uuid": "^11.0.5",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0",
-    "xterm-addon-web-links": "^0.9.0"
+    "xterm-addon-web-links": "^0.9.0",
+    "xterm-addon-webgl": "^0.16.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
     "electron": "^33.3.1",
     "electron-builder": "^25.1.8"
   },
   "build": {
     "appId": "dev.clauditor.app",
     "productName": "Clauditor",
-    "files": ["src/**/*", "assets/**/*", "package.json"],
-    "win": { "target": "nsis" },
-    "mac": { "target": "dmg" },
-    "linux": { "target": "AppImage" }
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }

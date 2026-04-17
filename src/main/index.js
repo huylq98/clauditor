@@ -27,11 +27,15 @@ function broadcast(channel, ...args) {
 }
 
 function createWindow() {
+  const isTest = process.env.CLAUDITOR_TEST === '1';
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 1500,
+    height: 900,
+    minWidth: 900,
+    minHeight: 500,
     title: 'Clauditor',
     backgroundColor: '#1e1e2e',
+    show: !isTest,
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'preload.js'),
       contextIsolation: true,
@@ -40,6 +44,7 @@ function createWindow() {
     },
   });
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+  if (!isTest) mainWindow.once('ready-to-show', () => mainWindow.maximize());
   mainWindow.on('close', (e) => {
     if (!quitting) {
       e.preventDefault();
@@ -65,7 +70,7 @@ async function bootstrap() {
   hookServer = new HookServer({ token: TOKEN, stateEngine });
   await hookServer.start();
 
-  settingsInstaller.install(TOKEN);
+  settingsInstaller.install();
 
   notifier = new Notifier({ onClick: focusSession });
 
@@ -97,13 +102,17 @@ async function bootstrap() {
     onQuit: () => { quitting = true; app.quit(); },
   });
   tray.start();
+
+  if (process.env.CLAUDITOR_TEST === '1') {
+    ipcMain.handle('__test:tray-items', () => tray.menuLabels?.() || []);
+  }
 }
 
 ipcMain.handle('sessions:list', () => {
   return ptyManager.list().map((s) => ({ ...s, state: stateEngine.get(s.id) }));
 });
 
-ipcMain.handle('sessions:create', async (_e, { cwd, name } = {}) => {
+ipcMain.handle('sessions:create', async (_e, { cwd, name, cols, rows } = {}) => {
   let chosenCwd = cwd;
   if (!chosenCwd) {
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -114,7 +123,7 @@ ipcMain.handle('sessions:create', async (_e, { cwd, name } = {}) => {
     chosenCwd = result.filePaths[0];
   }
   try {
-    return ptyManager.spawn({ cwd: chosenCwd, name });
+    return ptyManager.spawn({ cwd: chosenCwd, name, cols, rows });
   } catch (err) {
     console.error('[clauditor] spawn failed:', err);
     dialog.showErrorBox('Failed to start Claude Code', err.message);

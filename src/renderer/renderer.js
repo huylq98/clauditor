@@ -1,4 +1,4 @@
-/* global Terminal, FitAddon, WebLinksAddon */
+/* global Terminal, FitAddon, WebLinksAddon, WebglAddon */
 
 const api = window.clauditor;
 
@@ -15,17 +15,53 @@ const newBtn = document.getElementById('new-session');
 
 function createTerminal() {
   const term = new Terminal({
-    fontFamily: 'Menlo, Consolas, monospace',
+    fontFamily: '"JetBrains Mono", "Cascadia Mono", "Consolas", "Menlo", monospace',
     fontSize: 13,
-    theme: { background: '#11111b', foreground: '#cdd6f4', cursor: '#f5e0dc' },
+    theme: {
+      background: '#0b0c10',
+      foreground: '#ece4d2',
+      cursor: '#ff5a36',
+      cursorAccent: '#0b0c10',
+      selectionBackground: 'rgba(255, 90, 54, 0.28)',
+      black: '#141519',
+      red: '#ff5a36',
+      green: '#a3c966',
+      yellow: '#e8b04d',
+      blue: '#8fb3c5',
+      magenta: '#c99ad3',
+      cyan: '#7dc2c4',
+      white: '#ece4d2',
+      brightBlack: '#66625a',
+      brightRed: '#ff7858',
+      brightGreen: '#b5d97d',
+      brightYellow: '#f0c268',
+      brightBlue: '#a6c6d5',
+      brightMagenta: '#d6aee0',
+      brightCyan: '#95d2d4',
+      brightWhite: '#faf3e3',
+    },
     cursorBlink: true,
     scrollback: 10000,
     allowProposedApi: true,
+    smoothScrollDuration: 0,
+    macOptionIsMeta: true,
   });
   const fit = new FitAddon.FitAddon();
   term.loadAddon(fit);
   term.loadAddon(new WebLinksAddon.WebLinksAddon());
   return { term, fit };
+}
+
+function tryEnableWebgl(term) {
+  try {
+    const webgl = new WebglAddon.WebglAddon();
+    webgl.onContextLoss(() => webgl.dispose());
+    term.loadAddon(webgl);
+    return true;
+  } catch (e) {
+    console.warn('webgl renderer unavailable, falling back to DOM:', e);
+    return false;
+  }
 }
 
 function ensureSession(s) {
@@ -37,6 +73,7 @@ function ensureSession(s) {
   el.style.display = 'none';
   termContainer.appendChild(el);
   term.open(el);
+  tryEnableWebgl(term);
 
   term.onData((data) => api.write(s.id, data));
   term.onResize(({ cols, rows }) => api.resize(s.id, cols, rows));
@@ -62,7 +99,6 @@ async function selectSession(id) {
   }
   cwdLabel.textContent = s.cwd;
   updatePill(s.state);
-  killBtn.disabled = s.state === 'exited';
 
   if (!s.hydrated) {
     const buf = await api.getBuffer(id);
@@ -76,6 +112,15 @@ async function selectSession(id) {
 function updatePill(state) {
   statePill.className = `pill ${state || ''}`;
   statePill.textContent = state || '—';
+  if (state === 'exited') {
+    killBtn.textContent = 'Restart';
+    killBtn.disabled = false;
+    killBtn.classList.add('restart');
+  } else {
+    killBtn.textContent = 'Kill';
+    killBtn.disabled = !state;
+    killBtn.classList.remove('restart');
+  }
 }
 
 function renderList() {
@@ -83,6 +128,7 @@ function renderList() {
   for (const s of sessions.values()) {
     const li = document.createElement('li');
     li.className = `session-item${s.id === activeId ? ' active' : ''}`;
+    li.dataset.sessionId = s.id;
     li.innerHTML = `
       <span class="status-dot ${s.state}"></span>
       <span class="session-meta">
@@ -108,15 +154,49 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+function probeDims() {
+  // Pre-create a hidden, sized terminal element to measure cols/rows
+  // for the about-to-spawn session.
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:absolute;visibility:hidden;width:100%;height:100%;';
+  termContainer.appendChild(probe);
+  const t = new Terminal({ fontFamily: '"Cascadia Code", "Consolas", monospace', fontSize: 13 });
+  const fit = new FitAddon.FitAddon();
+  t.loadAddon(fit);
+  t.open(probe);
+  let dims;
+  try { dims = fit.proposeDimensions(); } catch {}
+  t.dispose();
+  probe.remove();
+  return dims && dims.cols ? { cols: dims.cols, rows: dims.rows } : { cols: 180, rows: 45 };
+}
+
 newBtn.onclick = async () => {
-  const s = await api.createSession();
+  const { cols, rows } = probeDims();
+  const s = await api.createSession({ cols, rows });
   if (s) {
     const entry = ensureSession(s);
     selectSession(entry.id);
   }
 };
 
-killBtn.onclick = () => { if (activeId) api.killSession(activeId); };
+killBtn.onclick = async () => {
+  if (!activeId) return;
+  const s = sessions.get(activeId);
+  if (!s) return;
+  if (s.state === 'exited') {
+    const created = await api.createSession({ cwd: s.cwd, name: s.name });
+    if (created) {
+      const oldEntry = sessions.get(activeId);
+      if (oldEntry?.el) oldEntry.el.remove();
+      sessions.delete(activeId);
+      const entry = ensureSession(created);
+      selectSession(entry.id);
+    }
+  } else {
+    api.killSession(activeId);
+  }
+};
 
 function startRename(id, li) {
   const s = sessions.get(id);
@@ -144,10 +224,12 @@ function startRename(id, li) {
   input.onblur = () => commit(true);
 }
 
-window.addEventListener('resize', () => {
+function refit() {
   const s = sessions.get(activeId);
-  if (s) s.fit.fit();
-});
+  if (s) requestAnimationFrame(() => s.fit.fit());
+}
+
+window.addEventListener('resize', refit);
 
 api.onCreated((s) => {
   const entry = ensureSession(s);
@@ -164,10 +246,7 @@ api.onState((id, state) => {
   if (!s) return;
   s.state = state;
   renderList();
-  if (id === activeId) {
-    updatePill(state);
-    killBtn.disabled = state === 'exited';
-  }
+  if (id === activeId) updatePill(state);
 });
 
 api.onExit((id) => {
@@ -175,7 +254,7 @@ api.onExit((id) => {
   if (!s) return;
   s.state = 'exited';
   renderList();
-  if (id === activeId) { updatePill('exited'); killBtn.disabled = true; }
+  if (id === activeId) updatePill('exited');
 });
 
 api.onRenamed((updated) => {
@@ -193,3 +272,23 @@ api.onNewSessionRequest(() => newBtn.click());
   for (const s of existing) ensureSession(s);
   if (existing[0]) selectSession(existing[0].id);
 })();
+
+if (window.__clauditorTestBridge?.enabled) {
+  window.__clauditorTest = {
+    getActiveTermBuffer: () => {
+      const s = sessions.get(activeId);
+      if (!s) return '';
+      const buf = s.term.buffer.active;
+      const lines = [];
+      for (let i = 0; i < buf.length; i++) {
+        const line = buf.getLine(i);
+        if (line) lines.push(line.translateToString(true));
+      }
+      return lines.join('\n');
+    },
+    getSessions: () => Array.from(sessions.values()).map((s) => ({
+      id: s.id, name: s.name, cwd: s.cwd, pid: s.pid, state: s.state,
+    })),
+    getActiveId: () => activeId,
+  };
+}

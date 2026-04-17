@@ -17,3 +17,10 @@ contextBridge.exposeInMainWorld('clauditor', {
   onFocus: (cb) => ipcRenderer.on('session:focus', (_e, id) => cb(id)),
   onNewSessionRequest: (cb) => ipcRenderer.on('ui:new-session', () => cb()),
 });
+
+if (process.env.CLAUDITOR_TEST === '1') {
+  contextBridge.exposeInMainWorld('__clauditorTestBridge', {
+    enabled: true,
+    trayItems: () => ipcRenderer.invoke('__test:tray-items'),
+  });
+}
