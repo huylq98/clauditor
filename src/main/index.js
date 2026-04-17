@@ -252,6 +252,25 @@ function doKillAll() {
 
 ipcMain.handle('sessions:killAll', () => doKillAll());
 
+function doRestartAllExited(dims) {
+  const ids = [];
+  for (const [id] of ptyManager.sessions) {
+    if (stateEngine.get(id) === 'exited') ids.push(id);
+  }
+  let restarted = 0;
+  for (const id of ids) {
+    const desc = ptyManager.restart(id, dims || {});
+    if (desc) {
+      stateEngine._set(id, 'running');
+      stateEngine._armIdle(id);
+      restarted++;
+    }
+  }
+  return { restarted };
+}
+
+ipcMain.handle('sessions:restartAllExited', (_e, dims) => doRestartAllExited(dims));
+
 ipcMain.handle('tree:list', (_e, sid, relPath) => fileWatcher.list(sid, relPath));
 ipcMain.handle('file:read', (_e, sid, relPath) => fileWatcher.readFile(sid, relPath));
 ipcMain.handle('activity:snapshot', (_e, sid) => activityService.snapshot(sid));

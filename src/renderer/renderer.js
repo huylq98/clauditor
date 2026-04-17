@@ -30,7 +30,10 @@ tabBar.init({
     if (!window.confirm(`Kill ${running} running session${running === 1 ? '' : 's'}?`)) return;
     api.killAllSessions();
   },
-  onRestartAllExited: () => {},
+  onRestartAllExited: async () => {
+    const { cols, rows } = probeDims();
+    await api.restartAllExitedSessions({ cols, rows });
+  },
   onForgetAllExited: () => {},
 });
 
