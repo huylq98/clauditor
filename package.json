@@ -11,8 +11,16 @@
     "test:pty": "playwright test --project=pty",
     "test:e2e": "playwright test --project=e2e"
   },
-  "author": "",
+  "author": "huylq98",
   "license": "MIT",
+  "homepage": "https://github.com/huylq98/clauditor#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/huylq98/clauditor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/huylq98/clauditor/issues"
+  },
   "dependencies": {
     "@lydell/node-pty": "^1.1.0",
     "body-parser": "^1.20.3",
@@ -45,6 +53,11 @@
     },
     "linux": {
       "target": "AppImage"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "huylq98",
+      "repo": "clauditor"
     }
   }
 }
