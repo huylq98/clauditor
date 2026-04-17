@@ -202,36 +202,12 @@ function startRename(id, li) {
   input.onblur = () => commit(true);
 }
 
-const sidebarEl = document.getElementById('sidebar');
-const toggleBtn = document.getElementById('sidebar-toggle');
-const COLLAPSE_THRESHOLD = 1100;
-let userPinned = null; // null=auto, true=expanded, false=collapsed
-
-function applySidebarState() {
-  const wantCollapsed = userPinned === null
-    ? window.innerWidth < COLLAPSE_THRESHOLD
-    : !userPinned;
-  sidebarEl.classList.toggle('collapsed', wantCollapsed);
-  toggleBtn.textContent = wantCollapsed ? '»' : '«';
-}
-
-toggleBtn.onclick = () => {
-  userPinned = sidebarEl.classList.contains('collapsed');
-  applySidebarState();
-  refit();
-};
-
 function refit() {
   const s = sessions.get(activeId);
   if (s) requestAnimationFrame(() => s.fit.fit());
 }
 
-window.addEventListener('resize', () => {
-  applySidebarState();
-  refit();
-});
-
-applySidebarState();
+window.addEventListener('resize', refit);
 
 api.onCreated((s) => {
   const entry = ensureSession(s);
