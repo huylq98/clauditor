@@ -5,7 +5,11 @@
   "main": "src/main/index.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "test": "playwright test",
+    "test:unit": "playwright test --project=unit",
+    "test:pty": "playwright test --project=pty",
+    "test:e2e": "playwright test --project=e2e"
   },
   "author": "",
   "license": "MIT",
@@ -20,6 +24,7 @@
     "xterm-addon-webgl": "^0.16.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
     "electron": "^33.3.1",
     "electron-builder": "^25.1.8"
   },

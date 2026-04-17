@@ -10,6 +10,8 @@ const MAX_BUFFER = 1024 * 1024;
 
 let cachedClaude = null;
 function resolveClaude() {
+  // Test-only override; not a user-facing config knob.
+  if (process.env.CLAUDITOR_CLI_OVERRIDE) return process.env.CLAUDITOR_CLI_OVERRIDE;
   if (cachedClaude) return cachedClaude;
   const isWin = os.platform() === 'win32';
   const candidates = isWin ? ['claude.exe', 'claude.cmd', 'claude.ps1', 'claude'] : ['claude'];
@@ -144,4 +146,4 @@ class PTYManager extends EventEmitter {
   }
 }
 
-module.exports = { PTYManager };
+module.exports = { PTYManager, resolveClaude };
