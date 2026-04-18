@@ -21,7 +21,10 @@ clean_hooks() {
   # Use python3 which is guaranteed on Debian/Ubuntu base systems.
   [ ! -f "$SETTINGS" ] && return 0
   python3 - "$SETTINGS" <<'PY' || true
-import json, sys
+import json, os, sys
+# Mirror src-tauri/src/settings_installer.rs: touch only known Clauditor events,
+# and write atomically via tmp->rename so a killed postrm can't truncate the file.
+EVENTS = ("UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop", "Notification")
 p = sys.argv[1]
 try:
     with open(p) as f: s = json.load(f)
@@ -29,13 +32,15 @@ except Exception:
     sys.exit(0)
 hooks = s.get("hooks")
 if isinstance(hooks, dict):
-    for ev in list(hooks.keys()):
+    for ev in EVENTS:
         arr = hooks.get(ev)
         if isinstance(arr, list):
             arr[:] = [g for g in arr if not (isinstance(g, dict) and g.get("_clauditor") is True)]
             if not arr: del hooks[ev]
     if not hooks: del s["hooks"]
-with open(p, "w") as f: json.dump(s, f, indent=2)
+tmp = p + ".tmp"
+with open(tmp, "w") as f: json.dump(s, f, indent=2)
+os.replace(tmp, p)
 PY
   [ -f "$HOOK_SCRIPT" ] && rm -f "$HOOK_SCRIPT"
   return 0
