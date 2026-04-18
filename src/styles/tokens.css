@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* Clauditor design tokens — warm-ember palette, ported from the Electron app. */
+@theme {
+  --color-bg: #14161b;
+  --color-surface: #1a1d24;
+  --color-panel: #20242d;
+  --color-elevated: #262b36;
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-border-strong: rgba(255, 255, 255, 0.12);
+
+  --color-fg: #c7c1b2;
+  --color-fg-muted: #8a8478;
+  --color-fg-subtle: #5a564e;
+
+  --color-accent: #c98469;
+  --color-accent-hover: #d99a82;
+  --color-accent-subtle: rgba(201, 132, 105, 0.12);
+
+  --color-ok: #8ba668;
+  --color-ok-subtle: rgba(139, 166, 104, 0.12);
+  --color-warn: #c99d62;
+  --color-warn-subtle: rgba(201, 157, 98, 0.12);
+  --color-danger: #c98469;
+
+  /* Per-state colors used by session pill + tab badge + tray */
+  --color-state-running: #7a97a6;
+  --color-state-idle: #8a8478;
+  --color-state-working: #c99d62;
+  --color-state-awaiting-user: #c98469;
+  --color-state-awaiting-permission: #a88ab4;
+  --color-state-exited: #5a564e;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+
+  --shadow-panel: 0 8px 24px -8px rgba(0, 0, 0, 0.6);
+  --shadow-elevated: 0 16px 40px -12px rgba(0, 0, 0, 0.7);
+
+  --font-sans: "Inter Variable", "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono NF", "JetBrains Mono", "Cascadia Mono", "Consolas", monospace;
+
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0.0, 0.2, 1);
+}
