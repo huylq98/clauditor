@@ -276,4 +276,30 @@ mod tests {
         // is acceptable. Just assert no panic and a non-empty result.
         assert!(!s.is_empty());
     }
+
+    #[test]
+    fn skips_skill_with_bad_yaml_and_warns() {
+        let snap = list_capabilities(&fixture("skill_bad_yaml"));
+        assert!(snap.items.is_empty());
+        assert_eq!(snap.parse_warnings.len(), 1);
+        assert!(snap.parse_warnings[0].contains("broken"));
+    }
+
+    #[test]
+    fn skips_skill_with_no_frontmatter_and_warns() {
+        let snap = list_capabilities(&fixture("skill_no_frontmatter"));
+        assert!(snap.items.is_empty());
+        assert_eq!(snap.parse_warnings.len(), 1);
+        assert!(snap.parse_warnings[0].contains("missing frontmatter"));
+    }
+
+    #[test]
+    fn falls_back_to_first_body_paragraph_for_when_to_use() {
+        let snap = list_capabilities(&fixture("skill_body_when_to_use"));
+        let skill = &snap.items[0];
+        assert_eq!(
+            skill.when_to_use.as_deref(),
+            Some("Use this when you want to test body-paragraph fallback.")
+        );
+    }
 }
