@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use serde_json::{json, Value};
@@ -13,21 +13,33 @@ pub const EVENTS: &[(&str, &str)] = &[
     ("Notification", "notification"),
 ];
 
-fn claude_dir() -> PathBuf {
-    dirs::home_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join(".claude")
+fn claude_dir_in(home: &Path) -> PathBuf {
+    home.join(".claude")
 }
-fn settings_path() -> PathBuf {
-    claude_dir().join("settings.json")
+fn settings_path_in(home: &Path) -> PathBuf {
+    claude_dir_in(home).join("settings.json")
 }
-fn hook_script_path() -> PathBuf {
+fn hook_script_path_in(home: &Path) -> PathBuf {
     let name = if cfg!(windows) {
         "clauditor-hook.ps1"
     } else {
         "clauditor-hook.sh"
     };
-    claude_dir().join(name)
+    claude_dir_in(home).join(name)
+}
+
+fn default_home() -> PathBuf {
+    dirs::home_dir().unwrap_or_else(|| PathBuf::from("."))
+}
+
+fn claude_dir() -> PathBuf {
+    claude_dir_in(&default_home())
+}
+fn settings_path() -> PathBuf {
+    settings_path_in(&default_home())
+}
+fn hook_script_path() -> PathBuf {
+    hook_script_path_in(&default_home())
 }
 
 const PS1: &str = r#"param([string]$Endpoint)
@@ -155,25 +167,39 @@ pub fn install() -> Result<PathBuf> {
     Ok(p)
 }
 
-pub fn uninstall() {
-    let p = settings_path();
+pub fn remove_hooks() -> std::io::Result<()> {
+    remove_hooks_in(&default_home())
+}
+
+pub(crate) fn remove_hooks_in(home: &Path) -> std::io::Result<()> {
+    let p = settings_path_in(home);
+    let script = hook_script_path_in(home);
+
     if !p.exists() {
-        return;
+        // Nothing to do; still try to remove an orphan script.
+        if script.exists() {
+            std::fs::remove_file(&script)?;
+        }
+        return Ok(());
     }
-    let Ok(text) = std::fs::read_to_string(&p) else {
-        return;
-    };
-    let Ok(mut settings) = serde_json::from_str::<Value>(&text) else {
-        return;
+
+    let text = std::fs::read_to_string(&p)?;
+    let mut settings: serde_json::Value = match serde_json::from_str(&text) {
+        Ok(v) => v,
+        Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, e)),
     };
     let Some(obj) = settings.as_object_mut() else {
-        return;
+        return Ok(());
     };
     let Some(hooks_val) = obj.get_mut("hooks") else {
-        return;
+        // No hooks at all — still remove stale script.
+        if script.exists() {
+            std::fs::remove_file(&script)?;
+        }
+        return Ok(());
     };
     let Some(hooks) = hooks_val.as_object_mut() else {
-        return;
+        return Ok(());
     };
     for (event, _) in EVENTS {
         if let Some(arr_val) = hooks.get_mut(*event) {
@@ -188,8 +214,98 @@ pub fn uninstall() {
     if hooks.is_empty() {
         obj.remove("hooks");
     }
-    if let Ok(out) = serde_json::to_string_pretty(&settings) {
-        let _ = std::fs::write(&p, out);
+    let out = serde_json::to_string_pretty(&settings)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    std::fs::write(&p, out)?;
+    if script.exists() {
+        std::fs::remove_file(&script)?;
     }
-    let _ = std::fs::remove_file(hook_script_path());
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    use tempfile::TempDir;
+
+    fn seed(home: &Path, settings: serde_json::Value, with_script: bool) {
+        let claude = claude_dir_in(home);
+        std::fs::create_dir_all(&claude).unwrap();
+        std::fs::write(
+            settings_path_in(home),
+            serde_json::to_string_pretty(&settings).unwrap(),
+        )
+        .unwrap();
+        if with_script {
+            std::fs::write(hook_script_path_in(home), b"# stub\n").unwrap();
+        }
+    }
+
+    #[test]
+    fn removes_only_sentinel_hooks_and_script() {
+        let tmp = TempDir::new().unwrap();
+        let home = tmp.path();
+        seed(
+            home,
+            json!({
+                "hooks": {
+                    "PreToolUse": [
+                        { "_clauditor": true,  "hooks": [] },
+                        { "_clauditor": false, "hooks": [{ "type": "command", "command": "user-hook" }] }
+                    ],
+                    "Stop": [
+                        { "_clauditor": true, "hooks": [] }
+                    ]
+                },
+                "theme": "dark"
+            }),
+            true,
+        );
+
+        remove_hooks_in(home).unwrap();
+
+        let txt = std::fs::read_to_string(settings_path_in(home)).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&txt).unwrap();
+
+        // Stop hooks fully cleared -> key removed.
+        assert!(v.get("hooks").unwrap().get("Stop").is_none());
+        // PreToolUse preserves the non-sentinel entry.
+        let remaining = v["hooks"]["PreToolUse"].as_array().unwrap();
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0]["_clauditor"], false);
+        // Non-hook keys untouched.
+        assert_eq!(v["theme"], "dark");
+        // Script gone.
+        assert!(!hook_script_path_in(home).exists());
+    }
+
+    #[test]
+    fn no_settings_file_is_idempotent() {
+        let tmp = TempDir::new().unwrap();
+        // No .claude dir at all.
+        remove_hooks_in(tmp.path()).unwrap();
+    }
+
+    #[test]
+    fn removes_empty_hooks_block_entirely() {
+        let tmp = TempDir::new().unwrap();
+        let home = tmp.path();
+        seed(
+            home,
+            json!({
+                "hooks": {
+                    "PreToolUse": [ { "_clauditor": true, "hooks": [] } ]
+                }
+            }),
+            false,
+        );
+
+        remove_hooks_in(home).unwrap();
+
+        let v: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(settings_path_in(home)).unwrap())
+                .unwrap();
+        assert!(v.get("hooks").is_none());
+    }
 }
