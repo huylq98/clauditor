@@ -8,10 +8,19 @@ use tauri::{
 pub fn create(app: &AppHandle) -> Result<TrayIcon<Wry>> {
     let show = MenuItem::with_id(app, "show", "Show Clauditor", true, None::<&str>)?;
     let new_session = MenuItem::with_id(app, "new_session", "New session", true, None::<&str>)?;
+    let check_updates = MenuItem::with_id(
+        app,
+        "check_updates",
+        "Check for updates…",
+        true,
+        None::<&str>,
+    )?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
 
     let menu: Menu<Wry> = MenuBuilder::new(app)
         .items(&[&show, &new_session])
+        .separator()
+        .items(&[&check_updates])
         .separator()
         .items(&[&quit])
         .build()?;
@@ -33,6 +42,13 @@ pub fn create(app: &AppHandle) -> Result<TrayIcon<Wry>> {
                     let _ = w.set_focus();
                 }
                 let _ = tauri::Emitter::emit(app, "ui:new-session", ());
+            }
+            "check_updates" => {
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.show();
+                    let _ = w.set_focus();
+                }
+                let _ = tauri::Emitter::emit(app, "ui:check-updates", ());
             }
             "quit" => {
                 app.exit(0);

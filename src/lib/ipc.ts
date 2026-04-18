@@ -77,6 +77,8 @@ export const on = {
     listen<B.ActivityDeltaEvent>('activity:delta', cb),
   newSessionRequest: (cb: () => void) =>
     listen<null>('ui:new-session', () => cb()),
+  checkUpdatesRequest: (cb: () => void) =>
+    listen<null>('ui:check-updates', () => cb()),
 } as const;
 
 export const isTauri = IS_TAURI;

@@ -152,6 +152,7 @@ export default function App() {
         await on.treeEvent((ev) => applyTreeEvent(ev)),
         await on.activityDelta(({ sid, delta }) => mergeActivity(sid, delta)),
         await on.newSessionRequest(() => void newSession()),
+        await on.checkUpdatesRequest(() => void useUpdater.getState().check({ manual: true })),
       );
     })();
 
