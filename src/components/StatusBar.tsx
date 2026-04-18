@@ -1,15 +1,15 @@
 import { useMemo } from 'react';
-import {
-  useSessions,
-  deriveActiveSession,
-  deriveStateCounts,
-} from '@/store/sessions';
+import { useSessions, deriveActiveSession, deriveStateCounts } from '@/store/sessions';
 import { StateBadge } from '@/components/ui/state-badge';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/ipc';
 import { probeDims } from '@/lib/terminal';
 
-export function StatusBar() {
+interface StatusBarProps {
+  onRequestKill: (id: string) => void;
+}
+
+export function StatusBar({ onRequestKill }: StatusBarProps) {
   const order = useSessions((s) => s.order);
   const byId = useSessions((s) => s.byId);
   const activeId = useSessions((s) => s.activeId);
@@ -23,7 +23,7 @@ export function StatusBar() {
       const { cols, rows } = probeDims(document.body);
       await api.restartSession(active.id, cols, rows);
     } else {
-      await api.killSession(active.id);
+      onRequestKill(active.id);
     }
   };
 
@@ -32,7 +32,10 @@ export function StatusBar() {
       <div className="flex items-center gap-2">
         {active ? <StateBadge state={active.state} /> : <span>—</span>}
         {active && (
-          <span className="truncate font-mono text-[10.5px] text-[var(--color-fg-subtle)]">
+          <span
+            className="truncate font-mono text-[10.5px] text-[var(--color-fg-subtle)]"
+            title={active.cwd}
+          >
             {active.cwd}
           </span>
         )}

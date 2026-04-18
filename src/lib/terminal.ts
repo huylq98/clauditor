@@ -1,5 +1,6 @@
 import { Terminal, type ITerminalOptions } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
+import { SearchAddon } from '@xterm/addon-search';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
 
@@ -30,6 +31,7 @@ export const terminalTheme: ITerminalOptions['theme'] = {
 export interface TerminalBundle {
   term: Terminal;
   fit: FitAddon;
+  search: SearchAddon;
   dispose: () => void;
 }
 
@@ -48,7 +50,9 @@ export function createTerminal(): TerminalBundle {
     fastScrollModifier: 'shift',
   });
   const fit = new FitAddon();
+  const search = new SearchAddon();
   term.loadAddon(fit);
+  term.loadAddon(search);
   term.loadAddon(new WebLinksAddon());
 
   const dispose = () => {
@@ -59,7 +63,7 @@ export function createTerminal(): TerminalBundle {
     }
   };
 
-  return { term, fit, dispose };
+  return { term, fit, search, dispose };
 }
 
 export function tryEnableWebgl(term: Terminal) {

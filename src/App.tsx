@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { TitleBar } from '@/components/TitleBar';
@@ -8,11 +8,16 @@ import { StatusBar } from '@/components/StatusBar';
 import { TerminalHost } from '@/components/TerminalHost';
 import { EmptyState } from '@/components/EmptyState';
 import { CommandPalette } from '@/components/CommandPalette';
+import { ShortcutsDialog } from '@/components/ShortcutsDialog';
+import { AlertDialog } from '@/components/ui/alert-dialog';
 import { api, on } from '@/lib/ipc';
 import { probeDims } from '@/lib/terminal';
 import { useSessions, deriveSessionList } from '@/store/sessions';
 import { useTree } from '@/store/tree';
+import { useRecents } from '@/store/recentCwds';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+
+type KillTarget = { id: string; name: string } | null;
 
 export default function App() {
   const order = useSessions((s) => s.order);
@@ -28,40 +33,72 @@ export default function App() {
   const applyTreeEvent = useTree((s) => s.applyTreeEvent);
   const mergeActivity = useTree((s) => s.mergeActivity);
   const dropTree = useTree((s) => s.drop);
+  const pushRecent = useRecents((s) => s.push);
 
-  const newSession = useCallback(async () => {
-    const { cols, rows } = probeDims(document.body);
-    const s = await api.createSession({ cols, rows }).catch((e) => {
-      toast.error('Failed to start session', { description: String(e) });
-      return null;
-    });
-    if (s) {
-      upsert(s);
-      setActive(s.id);
-    }
-  }, [upsert, setActive]);
+  const [killTarget, setKillTarget] = useState<KillTarget>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
-  const closeSession = useCallback(
-    async (id: string) => {
-      const s = useSessions.getState().byId[id];
-      if (!s) return;
-      if (s.state !== 'exited') {
-        if (!window.confirm(`Kill session "${s.name}"?`)) return;
-        await api.killSession(id);
-        return;
+  const spawnForCwd = useCallback(
+    async (cwd: string | null) => {
+      const { cols, rows } = probeDims(document.body);
+      const s = await api.createSession({ cwd, cols, rows }).catch((e) => {
+        toast.error('Failed to start session', { description: String(e) });
+        return null;
+      });
+      if (s) {
+        upsert(s);
+        setActive(s.id);
+        pushRecent(s.cwd);
       }
+    },
+    [upsert, setActive, pushRecent],
+  );
+
+  const newSession = useCallback(() => spawnForCwd(null), [spawnForCwd]);
+  const reopenCwd = useCallback((cwd: string) => spawnForCwd(cwd), [spawnForCwd]);
+
+  const forgetWithUndo = useCallback(
+    async (id: string) => {
+      const snapshot = useSessions.getState().byId[id];
+      if (!snapshot) return;
       await api.forgetSession(id);
       remove(id);
       dropTree(id);
+      toast(`Forgot "${snapshot.name}"`, {
+        description: snapshot.cwd,
+        duration: 5000,
+        action: {
+          label: 'Undo',
+          onClick: () => void spawnForCwd(snapshot.cwd),
+        },
+      });
     },
-    [remove, dropTree],
+    [remove, dropTree, spawnForCwd],
+  );
+
+  const requestClose = useCallback(
+    (id: string) => {
+      const s = useSessions.getState().byId[id];
+      if (!s) return;
+      if (s.state !== 'exited') {
+        setKillTarget({ id, name: s.name });
+        return;
+      }
+      void forgetWithUndo(id);
+    },
+    [forgetWithUndo],
   );
 
   const closeActive = useCallback(() => {
-    if (activeId) void closeSession(activeId);
-  }, [activeId, closeSession]);
+    if (activeId) requestClose(activeId);
+  }, [activeId, requestClose]);
 
-  /* Bootstrap: load existing sessions + subscribe to backend events. */
+  const confirmKill = useCallback(async () => {
+    if (!killTarget) return;
+    await api.killSession(killTarget.id);
+    setKillTarget(null);
+  }, [killTarget]);
+
   useEffect(() => {
     let cancelled = false;
     const unsubs: (() => void)[] = [];
@@ -69,12 +106,16 @@ export default function App() {
     (async () => {
       const existing = await api.listSessions().catch(() => []);
       if (cancelled) return;
-      for (const s of existing) upsert(s);
+      for (const s of existing) {
+        upsert(s);
+        if (s.cwd) pushRecent(s.cwd);
+      }
       if (existing[0] && !useSessions.getState().activeId) setActive(existing[0].id);
 
       unsubs.push(
         await on.sessionCreated((s) => {
           upsert(s);
+          if (s.cwd) pushRecent(s.cwd);
           if (!useSessions.getState().activeId) setActive(s.id);
         }),
         await on.sessionState(({ id, state }) => {
@@ -116,11 +157,7 @@ export default function App() {
         <div className="flex flex-1 min-h-0">
           <Sidebar />
           <main className="relative flex flex-1 min-w-0 flex-col">
-            <TabBar
-              onNewSession={newSession}
-              onSelect={setActive}
-              onClose={closeSession}
-            />
+            <TabBar onNewSession={newSession} onSelect={setActive} onClose={requestClose} />
             <div className="relative flex-1 min-h-0 bg-[var(--color-bg)]">
               {sessions.length === 0 ? (
                 <EmptyState onNewSession={newSession} />
@@ -130,10 +167,25 @@ export default function App() {
                 ))
               )}
             </div>
-            <StatusBar />
+            <StatusBar onRequestKill={requestClose} />
           </main>
         </div>
-        <CommandPalette onNewSession={newSession} />
+        <CommandPalette
+          onNewSession={newSession}
+          onReopenCwd={reopenCwd}
+          onShowShortcuts={() => setShortcutsOpen(true)}
+        />
+        <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+        <AlertDialog
+          open={killTarget !== null}
+          onOpenChange={(v) => !v && setKillTarget(null)}
+          title={`Kill session "${killTarget?.name ?? ''}"?`}
+          description="The Claude Code process will be terminated. The session will remain in the tab list until you forget it."
+          confirmLabel="Kill session"
+          cancelLabel="Cancel"
+          variant="danger"
+          onConfirm={confirmKill}
+        />
         <Toaster
           position="bottom-right"
           theme="dark"

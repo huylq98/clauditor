@@ -3,8 +3,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use parking_lot::Mutex;
+use tauri::async_runtime::{self, JoinHandle};
 use tauri::{AppHandle, Emitter};
-use tokio::task::JoinHandle;
 
 use crate::types::{SessionId, SessionState, SessionStateEvent};
 
@@ -145,7 +145,7 @@ impl StateEngine {
             Hook::Stop => {
                 self.cancel_stop(id);
                 let engine = self.clone();
-                let handle = tokio::spawn(async move {
+                let handle = async_runtime::spawn(async move {
                     tokio::time::sleep(STOP_GRACE).await;
                     if engine.get(id) == Some(SessionState::Running) {
                         engine.set(id, SessionState::AwaitingUser);
@@ -187,7 +187,7 @@ impl StateEngine {
 
     fn arm_idle(&self, id: SessionId) {
         let engine = self.clone();
-        let handle = tokio::spawn(async move {
+        let handle = async_runtime::spawn(async move {
             tokio::time::sleep(IDLE_TIMEOUT).await;
             let cur = engine.get(id);
             if matches!(cur, Some(SessionState::Running) | Some(SessionState::AwaitingUser)) {

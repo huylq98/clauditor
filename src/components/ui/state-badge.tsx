@@ -15,10 +15,23 @@ const DOT_CLASS: Record<SessionState, string> = {
   starting: 'bg-[var(--color-state-running)]',
   running: 'bg-[var(--color-state-running)]',
   idle: 'bg-[var(--color-state-idle)]',
-  working: 'bg-[var(--color-state-working)] animate-pulse',
-  awaiting_user: 'bg-[var(--color-state-awaiting-user)] animate-pulse',
-  awaiting_permission: 'bg-[var(--color-state-awaiting-permission)] animate-pulse',
+  working: 'bg-[var(--color-state-working)] animate-pulse shadow-[0_0_8px_var(--color-state-working)]',
+  awaiting_user:
+    'bg-[var(--color-state-awaiting-user)] animate-pulse shadow-[0_0_10px_var(--color-state-awaiting-user)]',
+  awaiting_permission:
+    'bg-[var(--color-state-awaiting-permission)] animate-pulse shadow-[0_0_10px_var(--color-state-awaiting-permission)]',
   exited: 'bg-[var(--color-state-exited)]',
+};
+
+/** Attention states get a larger dot so they're unmissable in peripheral vision. */
+const SIZE_CLASS: Record<SessionState, string> = {
+  starting: 'h-1.5 w-1.5',
+  running: 'h-1.5 w-1.5',
+  idle: 'h-1.5 w-1.5',
+  working: 'h-2 w-2',
+  awaiting_user: 'h-2 w-2',
+  awaiting_permission: 'h-2 w-2',
+  exited: 'h-1.5 w-1.5',
 };
 
 interface StateBadgeProps {
@@ -36,12 +49,21 @@ export function StateBadge({ state, showLabel = true, className }: StateBadgePro
         className,
       )}
     >
-      <span className={cn('h-1.5 w-1.5 rounded-full', DOT_CLASS[state])} />
+      <span className={cn('rounded-full transition-all', SIZE_CLASS[state], DOT_CLASS[state])} />
       {showLabel && <span className="font-medium">{LABEL[state]}</span>}
     </span>
   );
 }
 
 export function StateDot({ state, className }: { state: SessionState; className?: string }) {
-  return <span className={cn('inline-block h-1.5 w-1.5 rounded-full', DOT_CLASS[state], className)} />;
+  return (
+    <span
+      className={cn(
+        'inline-block rounded-full transition-all',
+        SIZE_CLASS[state],
+        DOT_CLASS[state],
+        className,
+      )}
+    />
+  );
 }

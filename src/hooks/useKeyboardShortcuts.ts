@@ -60,7 +60,8 @@ export function useKeyboardShortcuts({ onNewSession, onCloseActive }: ShortcutHa
         setActive(order[nextIdx]);
       }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    // Capture phase so we fire BEFORE xterm's keyboard handler swallows the event.
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
   }, [onNewSession, onCloseActive, setActive, toggleSidebar]);
 }

@@ -1,18 +1,34 @@
 import { useEffect, useMemo } from 'react';
 import { Command } from 'cmdk';
 import * as Dialog from '@radix-ui/react-dialog';
-import { FolderPlus, Skull, RotateCw, Trash2, PanelLeft, Terminal as TerminalIcon } from 'lucide-react';
+import {
+  FolderPlus,
+  History,
+  Skull,
+  RotateCw,
+  Trash2,
+  PanelLeft,
+  Keyboard,
+  Terminal as TerminalIcon,
+} from 'lucide-react';
 import { useUi } from '@/store/ui';
 import { useSessions, deriveSessionList } from '@/store/sessions';
+import { useRecents } from '@/store/recentCwds';
 import { api } from '@/lib/ipc';
 import { probeDims } from '@/lib/terminal';
 import { cn, shortId } from '@/lib/utils';
 
 interface CommandPaletteProps {
   onNewSession: () => void;
+  onReopenCwd: (cwd: string) => void;
+  onShowShortcuts: () => void;
 }
 
-export function CommandPalette({ onNewSession }: CommandPaletteProps) {
+export function CommandPalette({
+  onNewSession,
+  onReopenCwd,
+  onShowShortcuts,
+}: CommandPaletteProps) {
   const open = useUi((s) => s.paletteOpen);
   const setOpen = useUi((s) => s.setPaletteOpen);
   const toggleSidebar = useUi((s) => s.toggleSidebar);
@@ -20,6 +36,7 @@ export function CommandPalette({ onNewSession }: CommandPaletteProps) {
   const byId = useSessions((s) => s.byId);
   const sessions = useMemo(() => deriveSessionList(order, byId), [order, byId]);
   const setActive = useSessions((s) => s.setActive);
+  const recents = useRecents((s) => s.entries);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -28,8 +45,8 @@ export function CommandPalette({ onNewSession }: CommandPaletteProps) {
         setOpen(!open);
       }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
   }, [open, setOpen]);
 
   const close = () => setOpen(false);
@@ -37,6 +54,10 @@ export function CommandPalette({ onNewSession }: CommandPaletteProps) {
     close();
     void fn();
   };
+
+  // Filter recents to those not already open as sessions
+  const openCwds = new Set(sessions.map((s) => s.cwd));
+  const visibleRecents = recents.filter((r) => !openCwds.has(r.cwd));
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -56,15 +77,18 @@ export function CommandPalette({ onNewSession }: CommandPaletteProps) {
           )}
         >
           <Dialog.Title className="sr-only">Command palette</Dialog.Title>
+          <Dialog.Description className="sr-only">
+            Search sessions and run actions. Navigate with arrow keys, Enter to select, Escape to close.
+          </Dialog.Description>
           <Command className="flex flex-col">
             <Command.Input
-              placeholder="Type a command or search a session…"
+              placeholder="Type a command, session name, or recent path…"
               className={cn(
                 'w-full border-b border-[var(--color-border)] bg-transparent px-4 py-3 text-sm',
                 'text-[var(--color-fg)] placeholder:text-[var(--color-fg-subtle)] outline-none',
               )}
             />
-            <Command.List className="max-h-[360px] overflow-y-auto p-1">
+            <Command.List className="max-h-[420px] overflow-y-auto p-1">
               <Command.Empty className="px-3 py-6 text-center text-sm text-[var(--color-fg-subtle)]">
                 No results
               </Command.Empty>
@@ -84,6 +108,12 @@ export function CommandPalette({ onNewSession }: CommandPaletteProps) {
                   label="Toggle sidebar"
                   hint="Ctrl+B"
                   onSelect={() => run(toggleSidebar)}
+                />
+                <PaletteItem
+                  icon={<Keyboard size={14} />}
+                  label="Keyboard shortcuts"
+                  hint="Ctrl+/"
+                  onSelect={() => run(onShowShortcuts)}
                 />
                 <PaletteItem
                   icon={<Skull size={14} />}
@@ -126,12 +156,36 @@ export function CommandPalette({ onNewSession }: CommandPaletteProps) {
                   ))}
                 </Command.Group>
               )}
+
+              {visibleRecents.length > 0 && (
+                <Command.Group
+                  heading="Recent workspaces"
+                  className="mt-1 px-1 py-1 text-[10.5px] uppercase tracking-wider text-[var(--color-fg-subtle)]"
+                >
+                  {visibleRecents.map((r) => (
+                    <PaletteItem
+                      key={r.cwd}
+                      icon={<History size={14} />}
+                      label={shortenPath(r.cwd)}
+                      description={r.cwd}
+                      onSelect={() => run(() => onReopenCwd(r.cwd))}
+                    />
+                  ))}
+                </Command.Group>
+              )}
             </Command.List>
           </Command>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
   );
+}
+
+function shortenPath(p: string): string {
+  // Display the tail of the path — last 2 segments for workspace recognition
+  const parts = p.replace(/\\/g, '/').split('/').filter(Boolean);
+  if (parts.length <= 2) return p;
+  return `…/${parts.slice(-2).join('/')}`;
 }
 
 function PaletteItem({

@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { FolderOpen, Activity, PanelLeft } from 'lucide-react';
 import { useUi } from '@/store/ui';
 import { useSessions, deriveActiveSession } from '@/store/sessions';
 import { FileTree } from './FileTree';
 import { ActivityPanel } from './ActivityPanel';
+import { IconButton } from './ui/icon-button';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { cn } from '@/lib/utils';
 
 export function Sidebar() {
@@ -12,25 +14,22 @@ export function Sidebar() {
   const active = useMemo(() => deriveActiveSession(activeId, byId), [activeId, byId]);
   const collapsed = useUi((s) => s.sidebarCollapsed);
   const width = useUi((s) => s.sidebarWidth);
+  const setWidth = useUi((s) => s.setSidebarWidth);
   const toggle = useUi((s) => s.toggleSidebar);
 
   if (collapsed) {
     return (
       <aside className="flex h-full w-10 shrink-0 flex-col items-center gap-1 border-r border-[var(--color-border)] bg-[var(--color-bg)] py-2">
-        <button
-          onClick={toggle}
-          className="flex h-8 w-8 items-center justify-center rounded text-[var(--color-fg-muted)] hover:bg-white/5 hover:text-[var(--color-fg)]"
-          aria-label="Expand sidebar"
-        >
+        <IconButton label="Expand sidebar" hint="Ctrl+B" size="md" onClick={toggle}>
           <PanelLeft size={16} />
-        </button>
+        </IconButton>
       </aside>
     );
   }
 
   return (
     <aside
-      className="flex h-full shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-bg)]"
+      className="relative flex h-full shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-bg)]"
       style={{ width }}
     >
       <WorkspaceHeader
@@ -43,7 +42,7 @@ export function Sidebar() {
           {active ? (
             <FileTree sessionId={active.id} />
           ) : (
-            <EmptySectionHint>Select a session</EmptySectionHint>
+            <EmptySectionHint>Select a session to browse its files</EmptySectionHint>
           )}
         </SidebarSection>
       </div>
@@ -52,10 +51,11 @@ export function Sidebar() {
           {active ? (
             <ActivityPanel sessionId={active.id} />
           ) : (
-            <EmptySectionHint>No active session</EmptySectionHint>
+            <EmptySectionHint>Activity from tool calls will appear here</EmptySectionHint>
           )}
         </SidebarSection>
       </div>
+      <ResizeHandle width={width} setWidth={setWidth} />
     </aside>
   );
 }
@@ -75,20 +75,24 @@ function WorkspaceHeader({
         <div className="truncate text-sm font-medium text-[var(--color-fg)]">
           {name ?? 'No session'}
         </div>
-        <div
-          className="truncate font-mono text-[10.5px] text-[var(--color-fg-subtle)]"
-          title={cwd ?? ''}
-        >
-          {cwd ?? '—'}
-        </div>
+        {cwd ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="cursor-default truncate font-mono text-[10.5px] text-[var(--color-fg-subtle)] hover:text-[var(--color-fg-muted)]">
+                {cwd}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <span className="font-mono text-[11px]">{cwd}</span>
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <div className="truncate font-mono text-[10.5px] text-[var(--color-fg-subtle)]">—</div>
+        )}
       </div>
-      <button
-        onClick={onCollapse}
-        className="flex h-6 w-6 items-center justify-center rounded text-[var(--color-fg-muted)] hover:bg-white/5 hover:text-[var(--color-fg)]"
-        aria-label="Collapse sidebar"
-      >
+      <IconButton label="Collapse sidebar" hint="Ctrl+B" size="sm" onClick={onCollapse}>
         <PanelLeft size={14} />
-      </button>
+      </IconButton>
     </div>
   );
 }
@@ -120,5 +124,49 @@ function EmptySectionHint({ children }: { children: React.ReactNode }) {
     <div className="px-3 py-4 text-center text-[11px] text-[var(--color-fg-subtle)]">
       {children}
     </div>
+  );
+}
+
+function ResizeHandle({ width, setWidth }: { width: number; setWidth: (px: number) => void }) {
+  const startRef = useRef<{ startX: number; startWidth: number } | null>(null);
+
+  const onMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!startRef.current) return;
+      const dx = e.clientX - startRef.current.startX;
+      setWidth(startRef.current.startWidth + dx);
+    },
+    [setWidth],
+  );
+
+  const onMouseUp = useCallback(() => {
+    startRef.current = null;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [onMouseMove, onMouseUp]);
+
+  return (
+    <div
+      onMouseDown={(e) => {
+        startRef.current = { startX: e.clientX, startWidth: width };
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      }}
+      className={cn(
+        'absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize',
+        'transition-colors hover:bg-[var(--color-accent)]/20',
+      )}
+      aria-label="Resize sidebar"
+      role="separator"
+    />
   );
 }

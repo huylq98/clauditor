@@ -1,8 +1,11 @@
-import { useRef, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { useSessions, deriveSessionList } from '@/store/sessions';
 import { StateDot } from '@/components/ui/state-badge';
+import { IconButton } from '@/components/ui/icon-button';
+import { api } from '@/lib/ipc';
 import { cn, shortId } from '@/lib/utils';
+import type { SessionId } from '@/lib/bindings';
 
 interface TabBarProps {
   onNewSession: () => void;
@@ -15,7 +18,11 @@ export function TabBar({ onNewSession, onSelect, onClose }: TabBarProps) {
   const byId = useSessions((s) => s.byId);
   const sessions = useMemo(() => deriveSessionList(order, byId), [order, byId]);
   const activeId = useSessions((s) => s.activeId);
+  const reorder = useSessions((s) => s.reorder);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const [dragId, setDragId] = useState<SessionId | null>(null);
+  const [overId, setOverId] = useState<SessionId | null>(null);
+  const [editingId, setEditingId] = useState<SessionId | null>(null);
 
   useEffect(() => {
     if (!activeId || !scrollerRef.current) return;
@@ -24,6 +31,23 @@ export function TabBar({ onNewSession, onSelect, onClose }: TabBarProps) {
     );
     el?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
   }, [activeId]);
+
+  const handleDrop = () => {
+    if (!dragId || !overId || dragId === overId) {
+      setDragId(null);
+      setOverId(null);
+      return;
+    }
+    const next = [...order];
+    const from = next.indexOf(dragId);
+    const to = next.indexOf(overId);
+    if (from < 0 || to < 0) return;
+    next.splice(from, 1);
+    next.splice(to, 0, dragId);
+    reorder(next);
+    setDragId(null);
+    setOverId(null);
+  };
 
   return (
     <div
@@ -35,52 +59,120 @@ export function TabBar({ onNewSession, onSelect, onClose }: TabBarProps) {
         className="flex flex-1 items-stretch overflow-x-auto scroll-smooth"
         data-no-drag
       >
-        {sessions.map((s) => (
-          <div
-            key={s.id}
-            data-tab-id={s.id}
-            onClick={() => onSelect(s.id)}
-            className={cn(
-              'group relative flex h-full min-w-[140px] max-w-[220px] shrink-0 cursor-pointer',
-              'items-center gap-2 border-r border-[var(--color-border)] px-3 text-sm',
-              'transition-colors',
-              s.id === activeId
-                ? 'bg-[var(--color-surface)] text-[var(--color-fg)]'
-                : 'text-[var(--color-fg-muted)] hover:bg-white/[0.03] hover:text-[var(--color-fg)]',
-            )}
-          >
-            <StateDot state={s.state} />
-            <span className="flex-1 truncate">
-              {s.name || `session-${shortId(s.id)}`}
-            </span>
-            <button
-              onClick={(e) => {
+        {sessions.map((s) => {
+          const isActive = s.id === activeId;
+          const isOver = s.id === overId && dragId !== null && dragId !== s.id;
+          return (
+            <div
+              key={s.id}
+              data-tab-id={s.id}
+              draggable={editingId !== s.id}
+              title={s.cwd}
+              onClick={() => onSelect(s.id)}
+              onDoubleClick={(e) => {
                 e.stopPropagation();
-                onClose(s.id);
+                setEditingId(s.id);
+              }}
+              onDragStart={() => setDragId(s.id)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (dragId && dragId !== s.id) setOverId(s.id);
+              }}
+              onDragLeave={() => {
+                if (overId === s.id) setOverId(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                handleDrop();
+              }}
+              onDragEnd={() => {
+                setDragId(null);
+                setOverId(null);
               }}
               className={cn(
-                'flex h-5 w-5 shrink-0 items-center justify-center rounded',
-                'opacity-0 transition-opacity hover:bg-white/10 group-hover:opacity-100',
-                s.id === activeId && 'opacity-100',
+                'group relative flex h-full min-w-[140px] max-w-[220px] shrink-0 cursor-pointer',
+                'items-center gap-2 border-r border-[var(--color-border)] px-3 text-sm',
+                'transition-colors',
+                isActive
+                  ? 'bg-[var(--color-surface)] text-[var(--color-fg)]'
+                  : 'text-[var(--color-fg-muted)] hover:bg-white/[0.03] hover:text-[var(--color-fg)]',
+                dragId === s.id && 'opacity-50',
+                isOver && 'border-l-2 border-l-[var(--color-accent)]',
               )}
-              aria-label={`Close ${s.name}`}
             >
-              <X size={12} />
-            </button>
-            {s.id === activeId && (
-              <span className="absolute inset-x-0 -bottom-px h-px bg-[var(--color-accent)]" />
-            )}
-          </div>
-        ))}
+              <StateDot state={s.state} />
+              {editingId === s.id ? (
+                <TabNameInput
+                  initialValue={s.name || `session-${shortId(s.id)}`}
+                  onCommit={async (name) => {
+                    setEditingId(null);
+                    if (name.trim() && name !== s.name) {
+                      await api.renameSession(s.id, name.trim());
+                    }
+                  }}
+                  onCancel={() => setEditingId(null)}
+                />
+              ) : (
+                <span className="flex-1 truncate">{s.name || `session-${shortId(s.id)}`}</span>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClose(s.id);
+                }}
+                className={cn(
+                  'flex h-5 w-5 shrink-0 items-center justify-center rounded',
+                  'opacity-0 transition-opacity hover:bg-white/10 group-hover:opacity-100',
+                  isActive && 'opacity-100',
+                )}
+                aria-label={`Close ${s.name}`}
+              >
+                <X size={12} />
+              </button>
+              {isActive && (
+                <span className="absolute inset-x-0 -bottom-px h-px bg-[var(--color-accent)]" />
+              )}
+            </div>
+          );
+        })}
       </div>
-      <button
-        onClick={onNewSession}
-        className="flex h-full w-10 shrink-0 items-center justify-center text-[var(--color-fg-muted)] hover:bg-white/5 hover:text-[var(--color-fg)]"
-        aria-label="New session (Ctrl+T)"
-        data-no-drag
-      >
+      <IconButton label="New session" hint="Ctrl+T" size="lg" onClick={onNewSession} data-no-drag>
         <Plus size={16} />
-      </button>
+      </IconButton>
     </div>
+  );
+}
+
+function TabNameInput({
+  initialValue,
+  onCommit,
+  onCancel,
+}: {
+  initialValue: string;
+  onCommit: (next: string) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(initialValue);
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    ref.current?.focus();
+    ref.current?.select();
+  }, []);
+  return (
+    <input
+      ref={ref}
+      value={value}
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => onCommit(value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onCommit(value);
+        else if (e.key === 'Escape') onCancel();
+      }}
+      className={cn(
+        'flex-1 rounded border border-[var(--color-accent)]/40 bg-[var(--color-bg)] px-1.5 py-0.5',
+        'text-[13px] text-[var(--color-fg)] outline-none',
+      )}
+    />
   );
 }
