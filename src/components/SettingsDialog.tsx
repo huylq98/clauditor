@@ -28,6 +28,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           )}
         />
         <Dialog.Content
+          data-region="overlay"
           aria-describedby={undefined}
           className={cn(
             'fixed left-1/2 top-1/2 z-50 w-[min(720px,92vw)] h-[min(480px,80vh)] -translate-x-1/2 -translate-y-1/2',
