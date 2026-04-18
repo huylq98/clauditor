@@ -9,6 +9,7 @@ import { TerminalHost } from '@/components/TerminalHost';
 import { EmptyState } from '@/components/EmptyState';
 import { CommandPalette } from '@/components/CommandPalette';
 import { ShortcutsDialog } from '@/components/ShortcutsDialog';
+import { SettingsDialog } from '@/components/SettingsDialog';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { api, on } from '@/lib/ipc';
@@ -45,7 +46,7 @@ export default function App() {
 
   const [killTarget, setKillTarget] = useState<KillTarget>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [, setSettingsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const spawnForCwd = useCallback(
     async (cwd: string | null) => {
@@ -227,6 +228,7 @@ export default function App() {
           onShowSettings={() => setSettingsOpen(true)}
         />
         <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
         <AlertDialog
           open={killTarget !== null}
           onOpenChange={(v) => !v && setKillTarget(null)}
