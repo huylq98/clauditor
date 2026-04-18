@@ -54,6 +54,11 @@ export const api = {
   activitySnapshot: (sid: B.SessionId) =>
     invoke<B.ActivitySnapshot>('activity_snapshot', { sid }),
   pickDirectory: () => invoke<string | null>('dialog_pick_directory'),
+  getPreferences: () => invoke<B.Preferences>('get_preferences'),
+  setPreferences: (preferences: B.Preferences) =>
+    invoke<void>('set_preferences', { preferences }),
+  readInstalledHooks: () => invoke<B.InstalledHooks>('read_installed_hooks'),
+  reinstallHooks: () => invoke<void>('reinstall_hooks'),
 } as const;
 
 export const on = {
