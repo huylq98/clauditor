@@ -38,6 +38,19 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "installerHooks": "installer/windows/nsis/uninstall-hooks.nsh"
+      },
+      "wix": {
+        "fragmentPaths": ["installer/windows/wix/cleanup-fragment.wxs"]
+      }
+    },
+    "linux": {
+      "deb": {
+        "postRemoveScript": "installer/linux/debian/postrm"
+      }
+    }
   }
 }
