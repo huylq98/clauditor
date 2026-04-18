@@ -66,10 +66,11 @@ export function TabBar({ onNewSession, onSelect, onClose }: TabBarProps) {
         className="flex flex-1 items-stretch overflow-x-auto scroll-smooth"
         data-no-drag
       >
-        {sessions.map((s) => (
+        {sessions.map((s, i) => (
           <Tab
             key={s.id}
             session={s}
+            index={i}
             isActive={s.id === activeId}
             isEditing={s.id === editingId}
             isDragging={s.id === dragId}
@@ -93,6 +94,7 @@ export function TabBar({ onNewSession, onSelect, onClose }: TabBarProps) {
 
 interface TabProps {
   session: SessionEntry;
+  index: number;
   isActive: boolean;
   isEditing: boolean;
   isDragging: boolean;
@@ -108,6 +110,7 @@ interface TabProps {
 
 const Tab = memo(function Tab({
   session: s,
+  index,
   isActive,
   isEditing,
   isDragging,
@@ -125,7 +128,7 @@ const Tab = memo(function Tab({
     <div
       data-tab-id={s.id}
       draggable={!isEditing}
-      title={s.cwd}
+      title={s.name ? `${s.name}\n${s.cwd}` : s.cwd}
       onClick={() => onSelect(s.id)}
       onDoubleClick={(e) => {
         e.stopPropagation();
@@ -157,6 +160,20 @@ const Tab = memo(function Tab({
       )}
     >
       <StateDot state={s.state} />
+      {index < 9 && !isEditing && (
+        <kbd
+          aria-hidden
+          className={cn(
+            'hidden items-center justify-center rounded border px-1 font-mono text-[10px] leading-none sm:inline-flex',
+            isActive
+              ? 'border-[var(--color-border-strong)] bg-[var(--color-bg)] text-[var(--color-fg-muted)]'
+              : 'border-transparent text-[var(--color-fg-subtle)]',
+          )}
+          title={`Ctrl+${index + 1}`}
+        >
+          {index + 1}
+        </kbd>
+      )}
       {isEditing ? (
         <TabNameInput
           initialValue={label}

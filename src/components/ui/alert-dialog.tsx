@@ -77,6 +77,9 @@ const ConfirmButton = forwardRef<
       onClick={onClick}
       className={cn(
         'inline-flex h-8 items-center rounded-md px-3 text-sm font-medium transition-colors',
+        // Destructive confirm: always show the focus ring, not just on
+        // keyboard navigation — mouse users need to see the focused target too.
+        'outline-none ring-2 ring-transparent focus:ring-[var(--color-accent)]/60 focus-visible:ring-[var(--color-accent)]/60',
         dangerClass,
       )}
       autoFocus

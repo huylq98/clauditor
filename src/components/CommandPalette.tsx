@@ -174,6 +174,10 @@ export function CommandPalette({
                 </Command.Group>
               )}
             </Command.List>
+            <div className="flex items-center justify-between border-t border-[var(--color-border)] px-3 py-2 text-[11px] text-[var(--color-fg-subtle)]">
+              <span className="font-mono">↑↓ navigate · ↵ select · esc close</span>
+              <span>{sessions.length} session{sessions.length === 1 ? '' : 's'}</span>
+            </div>
           </Command>
         </Dialog.Content>
       </Dialog.Portal>
@@ -212,7 +216,7 @@ function PaletteItem({
       <span className="text-[var(--color-fg-muted)]">{icon}</span>
       <span className="flex-1 truncate">{label}</span>
       {description && (
-        <span className="truncate font-mono text-[10.5px] text-[var(--color-fg-subtle)]">
+        <span className="truncate font-mono text-[11px] text-[var(--color-fg-muted)]">
           {description}
         </span>
       )}
