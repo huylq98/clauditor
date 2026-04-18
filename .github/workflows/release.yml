@@ -32,15 +32,18 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
-      - run: npm ci
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - name: Type-check
-        run: npx tsc -b
+        run: pnpm exec tsc -b
       - name: Frontend build
-        run: npm run build
+        run: pnpm run build
 
   build:
     name: Build ${{ matrix.target }}
@@ -79,10 +82,14 @@ jobs:
             file \
             libssl-dev
 
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
+          cache: pnpm
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -93,7 +100,7 @@ jobs:
           workspaces: "./src-tauri -> target"
           key: release-${{ matrix.target }}
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
 
       - name: Build Tauri bundle
         id: bundle
