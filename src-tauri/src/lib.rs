@@ -4,6 +4,7 @@
 
 mod activity_service;
 mod app_state;
+mod cleanup;
 mod commands;
 mod file_watcher;
 mod hook_server;
@@ -13,6 +14,8 @@ mod settings_installer;
 mod state_engine;
 mod tray;
 mod types;
+
+pub use cleanup::run as run_cleanup;
 
 use std::path::PathBuf;
 
