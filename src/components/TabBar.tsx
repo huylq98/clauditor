@@ -58,6 +58,7 @@ export function TabBar({ onNewSession, onSelect, onClose }: TabBarProps) {
 
   return (
     <div
+      data-region="tabbar"
       data-tauri-drag-region
       className="flex h-10 shrink-0 items-stretch border-b border-[var(--color-border)] bg-[var(--color-bg)]"
     >

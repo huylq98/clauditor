@@ -19,7 +19,7 @@ export function Sidebar() {
 
   if (collapsed) {
     return (
-      <aside className="flex h-full w-10 shrink-0 flex-col items-center gap-1 border-r border-[var(--color-border)] bg-[var(--color-bg)] py-2">
+      <aside data-region="sidebar" className="flex h-full w-10 shrink-0 flex-col items-center gap-1 border-r border-[var(--color-border)] bg-[var(--color-bg)] py-2">
         <IconButton label="Expand sidebar" hint="Ctrl+B" size="md" onClick={toggle}>
           <PanelLeft size={16} />
         </IconButton>
@@ -29,6 +29,7 @@ export function Sidebar() {
 
   return (
     <aside
+      data-region="sidebar"
       className="relative flex h-full shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-bg)]"
       style={{ width }}
     >

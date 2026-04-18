@@ -158,9 +158,11 @@ function TerminalHostImpl({ sessionId, active }: TerminalHostProps) {
 
   return (
     <div
+      data-region="terminal"
+      data-terminal-host={sessionId}
       className={cn(
         'absolute inset-0 h-full w-full',
-        active ? 'visible' : 'invisible',
+        active ? '' : 'hidden',
       )}
     >
       <div ref={mountRef} className="absolute inset-0 h-full w-full" />

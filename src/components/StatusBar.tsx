@@ -28,11 +28,12 @@ export function StatusBar({ onRequestKill }: StatusBarProps) {
   };
 
   return (
-    <footer className="flex h-7 shrink-0 items-center justify-between border-t border-[var(--color-border)] bg-[var(--color-bg)] px-3 text-[11px] text-[var(--color-fg-muted)]">
+    <footer data-region="statusbar" className="flex h-7 shrink-0 items-center justify-between border-t border-[var(--color-border)] bg-[var(--color-bg)] px-3 text-[11px] text-[var(--color-fg-muted)]">
       <div className="flex items-center gap-2">
         {active ? <StateBadge state={active.state} /> : <span>—</span>}
         {active && (
           <span
+            data-testid="status-cwd"
             className="truncate font-mono text-[10.5px] text-[var(--color-fg-subtle)]"
             title={active.cwd}
           >
@@ -51,6 +52,7 @@ export function StatusBar({ onRequestKill }: StatusBarProps) {
         </span>
         {active && (
           <Button
+            data-testid="status-kill"
             variant={active.state === 'exited' ? 'solid' : 'danger'}
             size="sm"
             onClick={onKillOrRestart}

@@ -19,6 +19,7 @@ export function TitleBar() {
 
   return (
     <header
+      data-region="titlebar"
       data-tauri-drag-region
       className={cn(
         'flex h-9 w-full items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-bg)]',

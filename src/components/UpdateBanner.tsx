@@ -29,6 +29,7 @@ export function UpdateBanner() {
       {visible && (
         <motion.div
           key="update-banner"
+          data-region="overlay"
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 'auto', opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
