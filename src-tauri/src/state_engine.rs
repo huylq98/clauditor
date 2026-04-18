@@ -190,7 +190,10 @@ impl StateEngine {
         let handle = async_runtime::spawn(async move {
             tokio::time::sleep(IDLE_TIMEOUT).await;
             let cur = engine.get(id);
-            if matches!(cur, Some(SessionState::Running) | Some(SessionState::AwaitingUser)) {
+            if matches!(
+                cur,
+                Some(SessionState::Running) | Some(SessionState::AwaitingUser)
+            ) {
                 engine.set(id, SessionState::Idle);
             }
         });

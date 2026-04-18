@@ -188,7 +188,8 @@ pub async fn sessions_restart_all_exited(
     let mut restarted = 0u32;
     for id in ids {
         let pty = state.pty.clone();
-        if let Ok(Ok(_desc)) = tauri::async_runtime::spawn_blocking(move || pty.restart(id, cols, rows)).await
+        if let Ok(Ok(_desc)) =
+            tauri::async_runtime::spawn_blocking(move || pty.restart(id, cols, rows)).await
         {
             state.engine.register(id);
             restarted += 1;

@@ -48,14 +48,18 @@ impl FileWatcher {
         let ignores_clone = ignores.clone();
         let root_clone = root.clone();
 
-        let mut watcher = notify::recommended_watcher(
-            move |res: notify::Result<notify::Event>| {
+        let mut watcher =
+            notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
                 let Ok(event) = res else { return };
                 let event_type = match event.kind {
-                    EventKind::Create(notify::event::CreateKind::Folder) => Some(TreeEventType::AddDir),
+                    EventKind::Create(notify::event::CreateKind::Folder) => {
+                        Some(TreeEventType::AddDir)
+                    }
                     EventKind::Create(_) => Some(TreeEventType::Add),
                     EventKind::Modify(_) => Some(TreeEventType::Change),
-                    EventKind::Remove(notify::event::RemoveKind::Folder) => Some(TreeEventType::UnlinkDir),
+                    EventKind::Remove(notify::event::RemoveKind::Folder) => {
+                        Some(TreeEventType::UnlinkDir)
+                    }
                     EventKind::Remove(_) => Some(TreeEventType::Unlink),
                     _ => None,
                 };
@@ -82,8 +86,7 @@ impl FileWatcher {
                         },
                     );
                 }
-            },
-        )?;
+            })?;
 
         watcher.watch(&root, RecursiveMode::Recursive)?;
 
@@ -141,7 +144,11 @@ impl FileWatcher {
                 .map(|d| d.as_millis() as i64);
             out.push(TreeEntry {
                 path: rel,
-                kind: if is_dir { EntryKind::Dir } else { EntryKind::File },
+                kind: if is_dir {
+                    EntryKind::Dir
+                } else {
+                    EntryKind::File
+                },
                 size,
                 mtime,
             });
@@ -150,7 +157,11 @@ impl FileWatcher {
             let ad = matches!(a.kind, EntryKind::Dir);
             let bd = matches!(b.kind, EntryKind::Dir);
             if ad != bd {
-                return if ad { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater };
+                return if ad {
+                    std::cmp::Ordering::Less
+                } else {
+                    std::cmp::Ordering::Greater
+                };
             }
             a.path.cmp(&b.path)
         });
@@ -162,7 +173,10 @@ impl FileWatcher {
         let entry = guard.get(&sid)?;
         let abs = entry.root.join(rel);
         let rel_check = abs.strip_prefix(&entry.root).ok()?;
-        if rel_check.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+        if rel_check
+            .components()
+            .any(|c| matches!(c, std::path::Component::ParentDir))
+        {
             return None;
         }
         let meta = std::fs::metadata(&abs).ok()?;
@@ -176,7 +190,7 @@ impl FileWatcher {
             content.truncate(MAX as usize);
         }
         let text = String::from_utf8_lossy(&content).into_owned();
-        let binary = content.iter().any(|&b| b == 0);
+        let binary = content.contains(&0);
         Some(crate::types::FilePreview {
             path: rel.to_string(),
             content: text,
@@ -200,10 +214,7 @@ fn build_ignores(root: &Path) -> HashSet<String> {
                 continue;
             }
             let normalized = line.trim_matches('/');
-            if !normalized.is_empty()
-                && !normalized.contains('/')
-                && !normalized.contains('*')
-            {
+            if !normalized.is_empty() && !normalized.contains('/') && !normalized.contains('*') {
                 set.insert(normalized.to_string());
             }
         }

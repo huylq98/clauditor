@@ -110,7 +110,11 @@ async fn handle(
                     state.activity.handle_tool(HookActivity {
                         sid,
                         tool: tool.to_string(),
-                        phase: if event == "pre-tool-use" { "pre".into() } else { "post".into() },
+                        phase: if event == "pre-tool-use" {
+                            "pre".into()
+                        } else {
+                            "post".into()
+                        },
                         path: path.to_string(),
                     });
                 }

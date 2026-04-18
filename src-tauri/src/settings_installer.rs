@@ -83,9 +83,7 @@ fn build_command(endpoint: &str) -> String {
     let script = hook_script_path();
     let script = script.display();
     if cfg!(windows) {
-        format!(
-            "powershell -NoProfile -ExecutionPolicy Bypass -File \"{script}\" {endpoint}"
-        )
+        format!("powershell -NoProfile -ExecutionPolicy Bypass -File \"{script}\" {endpoint}")
     } else {
         format!("sh \"{script}\" {endpoint}")
     }
@@ -136,9 +134,15 @@ pub fn uninstall() {
     let Ok(mut settings) = serde_json::from_str::<Value>(&text) else {
         return;
     };
-    let Some(obj) = settings.as_object_mut() else { return };
-    let Some(hooks_val) = obj.get_mut("hooks") else { return };
-    let Some(hooks) = hooks_val.as_object_mut() else { return };
+    let Some(obj) = settings.as_object_mut() else {
+        return;
+    };
+    let Some(hooks_val) = obj.get_mut("hooks") else {
+        return;
+    };
+    let Some(hooks) = hooks_val.as_object_mut() else {
+        return;
+    };
     for (event, _) in EVENTS {
         if let Some(arr_val) = hooks.get_mut(*event) {
             if let Some(arr) = arr_val.as_array_mut() {

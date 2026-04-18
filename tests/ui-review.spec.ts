@@ -65,7 +65,7 @@ test.describe('UI review', () => {
     await page.keyboard.press('Control+K');
     await page.waitForTimeout(150);
     await page
-      .getByPlaceholder(/Type a command or search a session/i)
+      .getByPlaceholder(/Type a command/i)
       .fill('kill');
     await page.waitForTimeout(150);
     await shot(
@@ -125,7 +125,7 @@ test.describe('UI review', () => {
     await page.keyboard.press('Control+K');
     await page.waitForTimeout(200);
     await page
-      .getByPlaceholder(/Type a command or search a session/i)
+      .getByPlaceholder(/Type a command/i)
       .fill('beta');
     await page.waitForTimeout(200);
     await shot(
@@ -171,15 +171,16 @@ test.describe('UI review', () => {
     await page.waitForTimeout(200);
     await newSession(page);
     await page.waitForTimeout(400);
-    // Intercept the "Kill session" native confirm and let it show briefly
-    const dialogPromise = page.waitForEvent('dialog');
+    // Click the tab's close × button — triggers the Radix AlertDialog
     await page.locator('[data-tab-id] button[aria-label^="Close"]').first().click();
-    const dialog = await dialogPromise;
+    await page.waitForSelector('role=dialog', { timeout: 2000 });
+    await page.waitForTimeout(150);
     await shot(
       page,
       '10-kill-confirm',
-      `Native confirm before killing. Dialog message: "${dialog.message()}". Evaluates: copy quality of the confirmation string.`,
+      'Radix AlertDialog before killing. Evaluates: dialog chrome, copy quality, danger variant on the "Kill session" button, overlay backdrop.',
     );
-    await dialog.dismiss();
+    // Dismiss via Cancel so the session survives for other tests
+    await page.getByRole('button', { name: /Cancel/i }).click();
   });
 });
