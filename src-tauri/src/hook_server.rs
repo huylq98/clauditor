@@ -1,5 +1,7 @@
+use std::collections::VecDeque;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use axum::{
@@ -9,6 +11,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use parking_lot::Mutex;
 use serde_json::{json, Value};
 use subtle::ConstantTimeEq;
 
@@ -18,12 +21,37 @@ use crate::state_engine::{Hook, StateEngine};
 
 pub const PORT: u16 = 27182;
 
+// Rate limit on `/hook/:event`. Claude's hook scripts fire a few times per
+// tool call in normal use; 200 req/s across all events is generous enough
+// that legitimate sessions never hit it, but tight enough that a buggy hook
+// loop can't DoS the UI main thread via state-change spam.
+const RATE_WINDOW: Duration = Duration::from_secs(1);
+const RATE_LIMIT: usize = 200;
+
 #[derive(Clone)]
 struct HookState {
     token: Arc<String>,
     pty: PtyManager,
     engine: StateEngine,
     activity: ActivityService,
+    // Sliding-window request log. Kept as a VecDeque of Instants; on each
+    // request we pop expired entries from the front, append the new one at
+    // the back, and reject if the window exceeds RATE_LIMIT.
+    requests: Arc<Mutex<VecDeque<Instant>>>,
+}
+
+fn check_rate(requests: &Mutex<VecDeque<Instant>>) -> bool {
+    let mut q = requests.lock();
+    let now = Instant::now();
+    let cutoff = now - RATE_WINDOW;
+    while q.front().is_some_and(|t| *t < cutoff) {
+        q.pop_front();
+    }
+    if q.len() >= RATE_LIMIT {
+        return false;
+    }
+    q.push_back(now);
+    true
 }
 
 pub async fn start(
@@ -37,6 +65,7 @@ pub async fn start(
         pty,
         engine,
         activity,
+        requests: Arc::new(Mutex::new(VecDeque::with_capacity(RATE_LIMIT))),
     };
 
     let app = Router::new()
@@ -67,6 +96,13 @@ async fn handle(
         .unwrap_or(false);
     if !token_ok {
         return (StatusCode::FORBIDDEN, Json(json!({"error": "forbidden"})));
+    }
+
+    if !check_rate(&state.requests) {
+        return (
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(json!({"error": "rate_limited"})),
+        );
     }
 
     let payload = body.map(|Json(v)| v).unwrap_or(Value::Null);

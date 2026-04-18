@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -14,12 +14,6 @@ use crate::types::{
 };
 
 const MAX_BUFFER: usize = 1024 * 1024;
-// Amortize drain cost — when the buffer overflows by less than this, keep
-// it oversized until the next push pushes it further. Drain is O(n) because
-// it shifts the remaining bytes; doing it every push on a near-full buffer
-// is a ~50ms stall under sustained output. 64 KiB gives us a ~16x reduction
-// in drain frequency without meaningfully increasing memory.
-const DRAIN_SLACK: usize = 64 * 1024;
 
 struct Session {
     id: SessionId,
@@ -29,7 +23,12 @@ struct Session {
     pid: Option<u32>,
     master: Option<Box<dyn MasterPty + Send>>,
     writer: Option<Box<dyn Write + Send>>,
-    buffer: Vec<u8>,
+    // Ring buffer for PTY output. `VecDeque` gives O(1) amortized push_back
+    // and O(1) pop_front, so draining overflow doesn't pay the O(n) shift
+    // that `Vec::drain(..)` does. `get_buffer` iterates to produce a
+    // contiguous `String`; that's O(n) but only fires when the frontend
+    // asks to rehydrate scrollback (tab switch / reload).
+    buffer: VecDeque<u8>,
 }
 
 impl Session {
@@ -45,10 +44,8 @@ impl Session {
     }
 
     fn push_buffer(&mut self, chunk: &[u8]) {
-        self.buffer.extend_from_slice(chunk);
-        if self.buffer.len() > MAX_BUFFER + DRAIN_SLACK {
-            // Drain back down to exactly MAX_BUFFER so we amortize the O(n)
-            // shift across many pushes rather than paying it per chunk.
+        self.buffer.extend(chunk.iter().copied());
+        if self.buffer.len() > MAX_BUFFER {
             let overflow = self.buffer.len() - MAX_BUFFER;
             self.buffer.drain(..overflow);
         }
@@ -129,10 +126,16 @@ impl PtyManager {
     }
 
     pub fn get_buffer(&self, id: SessionId) -> String {
-        match self.sessions.lock().get(&id) {
-            Some(s) => String::from_utf8_lossy(&s.buffer).into_owned(),
-            None => String::new(),
-        }
+        let mut sessions = self.sessions.lock();
+        let Some(s) = sessions.get_mut(&id) else {
+            return String::new();
+        };
+        // `make_contiguous` folds the two internal slices of the VecDeque
+        // into one so we can hand an `&[u8]` to `from_utf8_lossy`. It does
+        // an in-place rotation, so subsequent reads are zero-cost until the
+        // ring wraps again.
+        let slice = s.buffer.make_contiguous();
+        String::from_utf8_lossy(slice).into_owned()
     }
 
     pub fn write(&self, id: SessionId, data: &str) {
@@ -207,7 +210,7 @@ impl PtyManager {
             pid: None,
             master: None,
             writer: None,
-            buffer: buffer.as_bytes().to_vec(),
+            buffer: VecDeque::from_iter(buffer.bytes()),
         };
         self.sessions.lock().insert(desc.id, s);
     }
@@ -219,7 +222,7 @@ impl PtyManager {
             .map(|s| {
                 (
                     s.describe(SessionState::Running),
-                    String::from_utf8_lossy(&s.buffer).into_owned(),
+                    String::from_utf8_lossy(&Vec::from_iter(s.buffer.iter().copied())).into_owned(),
                 )
             })
             .collect()
@@ -304,9 +307,8 @@ impl PtyManager {
             master: Some(pair.master),
             writer: Some(writer),
             // Pre-allocate MAX_BUFFER so sustained output doesn't trigger
-            // the Vec's geometric reallocation cycle (which copies the
-            // whole buffer each time).
-            buffer: Vec::with_capacity(MAX_BUFFER),
+            // the ring's geometric reallocation cycle.
+            buffer: VecDeque::with_capacity(MAX_BUFFER),
         };
         self.sessions.lock().insert(id, session);
         if let Some(pid) = pid {
