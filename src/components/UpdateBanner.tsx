@@ -9,6 +9,7 @@ export function UpdateBanner() {
   const downloaded = useUpdater((s) => s.downloaded);
   const total = useUpdater((s) => s.total);
   const error = useUpdater((s) => s.error);
+  const errorVisible = useUpdater((s) => s.errorVisible);
   const dismissed = useUpdater((s) => s.dismissed);
   const install = useUpdater((s) => s.install);
   const dismiss = useUpdater((s) => s.dismiss);
@@ -19,7 +20,7 @@ export function UpdateBanner() {
     (status === 'available' ||
       status === 'downloading' ||
       status === 'ready' ||
-      status === 'error');
+      (status === 'error' && errorVisible));
 
   const pct = total > 0 ? Math.round((downloaded / total) * 100) : 0;
 

@@ -39,7 +39,7 @@ export function createTerminal(): TerminalBundle {
   const term = new Terminal({
     fontFamily: '"JetBrains Mono NF", "JetBrains Mono", "Cascadia Mono", "Consolas", monospace',
     fontSize: 13,
-    lineHeight: 1.15,
+    lineHeight: 1.0,
     theme: terminalTheme,
     cursorBlink: true,
     scrollback: 5000,
