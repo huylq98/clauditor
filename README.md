@@ -9,8 +9,10 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-ec8469.svg)](./LICENSE)
 [![CI](https://github.com/huylq98/clauditor/actions/workflows/ci.yml/badge.svg)](https://github.com/huylq98/clauditor/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/huylq98/clauditor?color=ec8469)](https://github.com/huylq98/clauditor/releases)
-[![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-8ba668)](https://github.com/huylq98/clauditor/releases)
+[![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-8ba668)](https://github.com/huylq98/clauditor/releases/latest)
 [![Stars](https://img.shields.io/github/stars/huylq98/clauditor?style=social)](https://github.com/huylq98/clauditor/stargazers)
+
+**[⬇ Download](https://huylq98.github.io/clauditor/)** · **[Releases](https://github.com/huylq98/clauditor/releases/latest)** · **[Report a bug](https://github.com/huylq98/clauditor/issues/new)**
 
 <!-- Drop a screenshot or animated GIF into docs/screenshots/hero.png and uncomment -->
 <!-- <img src="docs/screenshots/hero.png" alt="Clauditor hero" width="860" /> -->
@@ -28,11 +30,15 @@ You started one Claude Code session. Then another, for a second repo. Then a thi
 ## What it gives you
 
 - **Every session in one window.** Open as many Claude Code sessions as you need, each pinned to its own working directory, all tabbed in a single native app.
-- **Live state at a glance.** Each tab shows whether Claude is *running*, *waiting for permission*, *waiting for your reply*, *idle*, or *exited* — driven by Claude Code's own lifecycle hooks, not screen-scraping.
+- **Live state at a glance.** Each tab shows whether Claude is *running*, *waiting for permission*, *waiting for your reply*, *idle*, or *exited* — driven by Claude Code's own lifecycle hooks, not screen-scraping. Attention states pulse so you notice them in peripheral vision.
 - **It tells you when something needs you.** Desktop notifications + in-app toasts when a backgrounded session needs permission or input. Click the notification, you land on the right tab.
 - **See what Claude is touching.** A per-session file tree lights up files as Claude reads, writes, edits, or deletes them, with a rolling activity log.
-- **Command palette.** `Ctrl/Cmd+K` jumps to sessions, kills / restarts / forgets, switches workspaces — everything, one shortcut.
-- **System tray.** Close the window, Clauditor keeps running; the tray menu surfaces the "new session" + "quit" actions.
+- **Command palette.** `Ctrl/⌘+K` jumps to sessions, kills / restarts / forgets, reopens recent workspaces, shows shortcuts.
+- **Search terminal scrollback.** `Ctrl/⌘+F` in any terminal opens an inline find overlay with next/prev match.
+- **Rename sessions.** Double-click any tab to give it a meaningful name. Drag to reorder.
+- **Undo destructive actions.** Forgot a session by mistake? A toast lets you re-open it at the same cwd within 5 seconds.
+- **Resizable sidebar + hover cwd tooltips** so your paths aren't lost to truncation.
+- **System tray.** Close the window, Clauditor keeps running; the tray menu surfaces "new session" + "quit".
 
 ## Why it's different
 
@@ -40,9 +46,11 @@ Not a web UI. Not a wrapper that re-implements Claude Code. Clauditor **spawns t
 
 ## Install
 
-### Pre-built binaries
+### Pre-built binaries ⬇
 
-Grab the latest installer from the [**Releases page**](https://github.com/huylq98/clauditor/releases/latest):
+**→ [Download page](https://huylq98.github.io/clauditor/) (auto-detects your OS)**
+
+Or grab the latest artifact from the [**Releases page**](https://github.com/huylq98/clauditor/releases/latest):
 
 | Platform | Artifact |
 |----------|----------|
@@ -68,14 +76,20 @@ npm run tauri dev
 
 ## Keyboard shortcuts
 
+Press `Ctrl/⌘+/` inside the app to open the full cheat sheet.
+
 | Shortcut                    | Action                                       |
 |-----------------------------|----------------------------------------------|
 | `Ctrl/⌘+T`                  | New session                                  |
 | `Ctrl/⌘+K`                  | Command palette                              |
-| `Ctrl/⌘+W`                  | Close active session                         |
+| `Ctrl/⌘+/`                  | Keyboard shortcuts cheat sheet               |
+| `Ctrl/⌘+F`                  | Search terminal scrollback                   |
+| `Ctrl/⌘+W`                  | Close / forget active session                |
+| `Ctrl/⌘+B`                  | Toggle sidebar                               |
 | `Ctrl/⌘+1` … `Ctrl/⌘+9`     | Jump to session 1–9                          |
 | `Ctrl/⌘+Shift+]` / `[`      | Next / previous tab                          |
-| `Ctrl/⌘+B`                  | Toggle sidebar                               |
+| Double-click tab            | Rename session                               |
+| Drag tab                    | Reorder                                      |
 
 ## How it works
 
@@ -93,14 +107,14 @@ src/                          React 19 frontend
 ├── main.tsx
 ├── App.tsx
 ├── components/               UI primitives + composed components
-├── hooks/
+├── hooks/                    keyboard shortcuts
 ├── lib/
 │   ├── ipc.ts                typed wrappers over invoke/listen
 │   ├── bindings.ts           types mirroring Rust contracts
-│   ├── terminal.ts           xterm setup
+│   ├── terminal.ts           xterm setup (fit + search + webgl addons)
 │   ├── utils.ts              cn() helper, formatters
 │   └── mock.ts               in-memory backend for browser dev
-├── store/                    zustand slices (sessions, tree, ui)
+├── store/                    zustand slices (sessions, tree, ui, recentCwds)
 └── styles/                   Tailwind v4 @theme tokens + globals
 
 src-tauri/                    Rust backend
@@ -145,9 +159,12 @@ idle ◀─(5 min)── (any) ────────▶ running
 - [x] Bulk actions (kill all, restart all)
 - [x] Command palette (`Ctrl/⌘+K`)
 - [x] Virtualized file tree
+- [x] Rename + drag-reorder tabs
+- [x] Recent workspaces reopener
+- [x] Terminal scrollback search
+- [x] Undo on forget
 - [ ] Light mode (tokens are wired; needs a toggle)
 - [ ] Auto-updater via `tauri-plugin-updater` (signed releases)
-- [ ] Search across all session transcripts
 - [ ] Per-session themes / accent colors
 - [ ] Resumable sessions backed by Claude Code's session history
 
@@ -158,7 +175,12 @@ Have a request? [**Open an issue**](https://github.com/huylq98/clauditor/issues/
 ```bash
 npm run tauri dev      # launch in dev mode (vite + rust, HMR)
 npm run tauri build    # build signed installers into src-tauri/target/release/bundle/
-npm test               # playwright smoke tests (browser + mock backend)
+
+npm test               # all Playwright specs (browser + mock backend)
+npm run test:smoke     # renders + basic flows
+npm run test:ui-review # capture 10 reference screenshots to tests/artifacts/review/
+npm run perf           # latency suite against dev server
+npm run perf:prod      # latency suite against the production build
 npm run lint           # ESLint
 ```
 
