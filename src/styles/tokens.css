@@ -45,3 +45,41 @@
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-in-out: cubic-bezier(0.4, 0.0, 0.2, 1);
 }
+
+/* Light theme — parchment palette. Opt in via <html data-theme="light">. */
+:root[data-theme='light'] {
+  --color-bg: #fafaf7;
+  --color-surface: #f4f1e9;
+  --color-panel: #ffffff;
+  --color-elevated: #f7f4ec;
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-border-strong: rgba(0, 0, 0, 0.14);
+
+  --color-fg: #2a2820;
+  --color-fg-muted: #6a6558;
+  --color-fg-subtle: #9b978b;
+
+  --color-accent: #b06a4d;
+  --color-accent-hover: #c38067;
+  --color-accent-subtle: rgba(176, 106, 77, 0.12);
+
+  --color-ok: #6d8a45;
+  --color-ok-subtle: rgba(109, 138, 69, 0.12);
+  --color-warn: #b07a35;
+  --color-warn-subtle: rgba(176, 122, 53, 0.12);
+  --color-danger: #b06a4d;
+
+  --color-state-running: #5b7684;
+  --color-state-idle: #6a6558;
+  --color-state-working: #b07a35;
+  --color-state-awaiting-user: #b06a4d;
+  --color-state-awaiting-permission: #8870a0;
+  --color-state-exited: #9b978b;
+
+  --shadow-panel: 0 6px 18px -8px rgba(0, 0, 0, 0.14);
+  --shadow-elevated: 0 12px 32px -10px rgba(0, 0, 0, 0.18);
+}
+
+:root {
+  --ui-scale: 100%;
+}

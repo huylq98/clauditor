@@ -20,10 +20,15 @@ html {
   color: var(--color-fg);
   font-family: var(--font-sans);
   font-feature-settings: "cv11", "ss01", "ss03";
+  font-size: calc(16px * var(--ui-scale) / 100);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color-scheme: dark;
   user-select: none;
+}
+
+html[data-theme='light'] {
+  color-scheme: light;
 }
 
 body {
