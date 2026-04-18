@@ -1,8 +1,7 @@
 # Clauditor — AI agent guide
 
 > This file is a shared reference for any AI agent working on this repo.
-> **`AGENTS.md`** mirrors this content so agents that follow the `agents.md`
-> convention pick it up too.
+> **`AGENTS.md`** mirrors this content so agents that follow either convention pick it up.
 
 ## What this project is
 
@@ -17,6 +16,84 @@ Clauditor is a cross-platform desktop manager for running multiple **Claude Code
 - **CI**: GitHub Actions matrix on Windows / macOS / Linux (x64 + arm64)
 
 Full dependency list: `package.json` + `src-tauri/Cargo.toml`.
+
+---
+
+## Behavioral guidelines
+
+> Adapted from [forrestchang/andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills). These bias toward caution over speed. For trivial tasks, use judgment.
+
+### 1. Think before coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+- State assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them — don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+### 2. Simplicity first
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+### 3. Surgical changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it — don't delete it.
+
+When your changes create orphans:
+- Remove imports / variables / functions that *your* changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: every changed line traces directly back to the user's request.
+
+### 4. Goal-driven execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass."
+- "Fix the bug" → "Write a test that reproduces it, then make it pass."
+- "Refactor X" → "Ensure tests pass before and after."
+
+For multi-step tasks, state a brief plan up front:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak ones ("make it work") require constant clarification.
+
+### 5. Leave the tree cleaner than you found it — but only in your patch
+
+- Every new file obeys `.editorconfig` (2-space indent, LF, UTF-8).
+- Rust code passes `cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings`.
+- TypeScript passes `npx tsc -b`.
+- Before committing, run the relevant test suite (`npm run test:smoke` at minimum for UI changes; `cargo test` for backend changes).
+
+### 6. When you hit a wall
+
+- Read the error literally. Don't paraphrase into a guess.
+- Check `tests/artifacts/` for the latest screenshot + report.
+- For CI failures, `gh run view <run-id> --log-failed` before hypothesizing.
+- If you're about to suppress a warning or disable a test, stop and surface it first.
+
+---
 
 ## Key directories
 
@@ -97,6 +174,11 @@ cargo test --all
 
 - `README.md` — user-facing intro and install.
 - `CONTRIBUTING.md` — setup, branching, commits, test matrix.
+- `CODE_OF_CONDUCT.md` — Contributor Covenant 2.1.
 - `CHANGELOG.md` — release history.
 - `SECURITY.md` — vulnerability reporting + threat model.
 - Design specs: `docs/superpowers/specs/*.md` (gitignored by design; local-only).
+
+---
+
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
