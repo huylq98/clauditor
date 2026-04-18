@@ -3,12 +3,18 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+    # Skip review when a PR only touches workflows — the claude-code-action
+    # validates workflow files against the default branch and fails when a
+    # PR modifies them. That's a security feature, not a bug; we just don't
+    # need a Claude review on CI-plumbing changes anyway.
+    paths-ignore:
+      - ".github/workflows/**"
+      - "**/*.md"
+      - "CHANGELOG.md"
+      - "CODEOWNERS"
+      - ".gitignore"
+      - ".editorconfig"
+      - ".nvmrc"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -22,6 +28,7 @@ jobs:
     #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
 
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       pull-requests: read

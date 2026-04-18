@@ -1,0 +1,13 @@
+# Global ownership — every file defaults to the repo owner for review.
+*                           @huylq98
+
+# Build + release infrastructure — extra care.
+/.github/workflows/         @huylq98
+/.github/dependabot.yml     @huylq98
+/src-tauri/Cargo.toml       @huylq98
+/src-tauri/tauri.conf.json  @huylq98
+
+# Security-sensitive surfaces.
+/src-tauri/src/settings_installer.rs  @huylq98
+/src-tauri/src/hook_server.rs         @huylq98
+/SECURITY.md                          @huylq98

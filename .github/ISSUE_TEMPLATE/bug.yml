@@ -1,0 +1,78 @@
+name: Bug report
+description: Something broken, hanging, or misbehaving.
+title: "[Bug] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. A few specifics up front save a lot of back-and-forth.
+
+  - type: input
+    id: clauditor-version
+    attributes:
+      label: Clauditor version
+      description: See `Help → About` inside the app, or the file name of the installer you ran.
+      placeholder: "v0.2.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux (AppImage)
+        - Linux (deb)
+        - Linux (rpm)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: claude-version
+    attributes:
+      label: Claude Code CLI version
+      description: Run `claude --version`.
+      placeholder: "1.2.3"
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug. Mention expected vs actual behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / console output
+      description: |
+        If the bug is crashy, open devtools with F12 inside the Clauditor window and paste any red console errors. Or paste terminal output from `npm run tauri dev` if running from source.
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I'm running the latest release (or latest from `main`).
+          required: true
+        - label: I've searched existing issues and this is not a duplicate.
+          required: true

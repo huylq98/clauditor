@@ -1,0 +1,49 @@
+name: OSSF Scorecard
+
+on:
+  # Weekly supply-chain health check.
+  schedule:
+    - cron: "30 5 * * 1"
+  # Re-evaluate whenever branch-protection / workflows change.
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: read-all
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+concurrency:
+  group: scorecard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # Needed to upload SARIF results to the Security tab.
+      security-events: write
+      # Needed to receive a Sigstore OIDC token so Scorecard can publish results.
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run analysis
+        uses: ossf/scorecard-action@v2.4.0
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          # Publishes to https://api.securityscorecards.dev so the badge works.
+          publish_results: true
+
+      - name: Upload SARIF to Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif

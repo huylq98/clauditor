@@ -1,0 +1,113 @@
+version: 2
+updates:
+  # Frontend npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    labels:
+      - "deps"
+      - "frontend"
+    commit-message:
+      prefix: "deps(frontend)"
+    groups:
+      radix-ui:
+        patterns:
+          - "@radix-ui/*"
+      xterm:
+        patterns:
+          - "@xterm/*"
+      tauri:
+        patterns:
+          - "@tauri-apps/*"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      dev-tooling:
+        dependency-type: "development"
+        patterns:
+          - "typescript"
+          - "vite"
+          - "@vitejs/*"
+          - "eslint*"
+          - "@eslint/*"
+          - "@types/*"
+          - "@playwright/test"
+      # Catch-all for everything else
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Major bumps still get individual PRs for human review.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # Rust / Cargo dependencies
+  - package-ecosystem: "cargo"
+    directory: "/src-tauri"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    labels:
+      - "deps"
+      - "backend"
+    commit-message:
+      prefix: "deps(backend)"
+    groups:
+      tauri:
+        patterns:
+          - "tauri*"
+      tokio-stack:
+        patterns:
+          - "tokio*"
+          - "axum*"
+          - "tower*"
+          - "futures*"
+      serde-stack:
+        patterns:
+          - "serde*"
+          - "serde_json"
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions themselves
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "deps"
+      - "ci"
+    commit-message:
+      prefix: "deps(ci)"
+    groups:
+      actions:
+        patterns:
+          - "actions/*"
+          - "github/*"
+      third-party:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "actions/*"
+          - "github/*"

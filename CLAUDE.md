@@ -1,0 +1,102 @@
+# Clauditor — AI agent guide
+
+> This file is a shared reference for any AI agent working on this repo.
+> **`AGENTS.md`** mirrors this content so agents that follow the `agents.md`
+> convention pick it up too.
+
+## What this project is
+
+Clauditor is a cross-platform desktop manager for running multiple **Claude Code** CLI sessions in parallel. It spawns the real `claude` binary inside a PTY per session, tracks live state via Claude Code's own lifecycle hooks, and presents everything in a tabbed native window.
+
+## Tech stack
+
+- **Shell**: Tauri 2 (Rust + system webview)
+- **Backend (Rust, `src-tauri/`)**: `tokio`, `portable-pty`, `notify`, `axum`, `serde_json`, `parking_lot`
+- **Frontend (TypeScript, `src/`)**: React 19, Vite 6, Tailwind v4, Zustand, xterm.js, Radix UI, `cmdk`, Framer Motion, Sonner
+- **Tests**: Playwright (browser + mock backend), `cargo test`
+- **CI**: GitHub Actions matrix on Windows / macOS / Linux (x64 + arm64)
+
+Full dependency list: `package.json` + `src-tauri/Cargo.toml`.
+
+## Key directories
+
+```
+src/                      React frontend
+  components/             UI primitives + composed components
+  hooks/                  Keyboard shortcuts, etc.
+  lib/                    ipc.ts, bindings.ts, terminal.ts, utils.ts, mock.ts
+  store/                  Zustand slices (sessions, tree, ui, recentCwds)
+  styles/                 Tailwind v4 @theme tokens + globals
+
+src-tauri/                Rust backend
+  src/
+    main.rs / lib.rs      Entry + builder
+    commands.rs           #[tauri::command] exports
+    types.rs              Shared serializable types
+    pty_manager.rs        portable-pty spawn/read/write/resize
+    state_engine.rs       Per-session FSM (7 states)
+    hook_server.rs        axum HTTP server on 127.0.0.1:27182
+    file_watcher.rs       notify-based per-session recursive watcher
+    activity_service.rs   Tool-call activity aggregation
+    session_store.rs      serde_json persistence (atomic tmp→rename)
+    settings_installer.rs ~/.claude/settings.json hook installer
+    tray.rs               System tray
+  tauri.conf.json         App config, bundle targets
+  capabilities/*.json     Tauri 2 capabilities
+
+tests/                    Playwright specs
+site/                     GitHub Pages download landing page
+.github/workflows/        CI, Release, Pages, OSSF Scorecard, Claude bots
+```
+
+## Commands
+
+```bash
+npm run tauri dev         # launch app in dev mode (HMR)
+npm run tauri build       # build signed installers
+npm run build             # frontend-only build
+npm run lint              # ESLint
+
+npm run test              # full Playwright suite
+npm run test:smoke        # core flows, ~5s
+npm run test:ui-review    # screenshot capture, ~55s
+npm run perf              # latency suite against dev server
+npm run perf:prod         # latency suite against production build
+
+cd src-tauri
+cargo fmt --all -- --check
+cargo clippy --all-targets -- -D warnings
+cargo test --all
+```
+
+## Conventions
+
+- **Commits**: `<type>(<scope>): <subject>` — types: `feat`, `fix`, `docs`, `ci`, `perf`, `refactor`, `test`, `deps`, `chore`.
+- **Branches**: `feat/<slug>`, `fix/<slug>`, `ci/<slug>`, `docs/<slug>`.
+- **PRs**: required check is the aggregating `ci-gate`. The `perf` job is informational. Dependabot patch/minor PRs auto-merge.
+- **Writing code**: no comments unless the *why* is non-obvious. Prefer deleting dead code over annotating it.
+- **Writing tests**: smoke/UI tests use the browser mock backend (`src/lib/mock.ts`). Real-PTY tests would need `tauri-driver` (not set up yet).
+
+## Architectural invariants
+
+- **Hook server** listens only on `127.0.0.1:27182` and gates on a per-launch bearer token in the `X-Clauditor-Token` header.
+- **Session attribution** on hook callbacks uses the parent PID of the hook process, NOT env vars — env vars leak to descendant processes and would misattribute grandchildren.
+- **`~/.claude/settings.json`** hook format is byte-compatible between Clauditor's Electron era and Tauri era. Changing the hook payload shape is a breaking change for users on older Clauditor versions.
+- **Keyboard shortcuts** attach via `window.addEventListener('keydown', handler, true)` (capture phase). xterm otherwise swallows `⌘K` / `⌘T` / `⌘B` / `⌘F` etc. when the terminal is focused.
+- **State derivations** in the UI — use primitive Zustand selectors (`s.order`, `s.byId`) + `useMemo`, never selectors that build fresh objects each call. Infinite-loop risk from React's `useSyncExternalStore`.
+- **TerminalHost** stays mounted per session for its lifetime; visibility toggles via CSS. Never unmount-then-remount on tab switch — xterm scrollback would be destroyed.
+
+## Where to look first
+
+- **New feature**: start in `src/components/` or `src-tauri/src/commands.rs` depending on which layer owns it.
+- **Bug in session lifecycle**: `src-tauri/src/state_engine.rs` (FSM), `src-tauri/src/pty_manager.rs` (spawn + read), `src/store/sessions.ts` (frontend state).
+- **Bug in UI**: `src/components/` — start with the affected component, trace props back to `src/App.tsx`.
+- **Perf regression**: run `npm run perf:prod` locally, compare against the budgets in `tests/perf.spec.ts`.
+
+## Reference docs
+
+- `README.md` — user-facing intro and install.
+- `CONTRIBUTING.md` — setup, branching, commits, test matrix.
+- `CHANGELOG.md` — release history.
+- `SECURITY.md` — vulnerability reporting + threat model.
+- Design specs: `docs/superpowers/specs/*.md` (gitignored by design; local-only).

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question / general discussion
+    url: https://github.com/huylq98/clauditor/discussions
+    about: Ask a question, share an idea, or discuss Clauditor use cases.
+  - name: Security vulnerability
+    url: https://github.com/huylq98/clauditor/security/advisories/new
+    about: Privately report a suspected security issue. Do NOT open a public issue.
