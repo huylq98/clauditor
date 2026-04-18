@@ -84,7 +84,7 @@ Strong success criteria let you loop independently. Weak ones ("make it work") r
 - Every new file obeys `.editorconfig` (2-space indent, LF, UTF-8).
 - Rust code passes `cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings`.
 - TypeScript passes `npx tsc -b`.
-- Before committing, run the relevant test suite (`npm run test:smoke` at minimum for UI changes; `cargo test` for backend changes).
+- Before committing, run the relevant test suite (`pnpm test:smoke` at minimum for UI changes; `cargo test` for backend changes).
 
 ### 6. When you hit a wall
 
@@ -129,16 +129,17 @@ site/                     GitHub Pages download landing page
 ## Commands
 
 ```bash
-npm run tauri dev         # launch app in dev mode (HMR)
-npm run tauri build       # build signed installers
-npm run build             # frontend-only build
-npm run lint              # ESLint
+pnpm install              # first run or after deps change
+pnpm tauri dev            # launch app in dev mode (HMR)
+pnpm tauri build          # build signed installers
+pnpm build                # frontend-only build
+pnpm lint                 # ESLint
 
-npm run test              # full Playwright suite
-npm run test:smoke        # core flows, ~5s
-npm run test:ui-review    # screenshot capture, ~55s
-npm run perf              # latency suite against dev server
-npm run perf:prod         # latency suite against production build
+pnpm test                 # full Playwright suite
+pnpm test:smoke           # core flows, ~5s
+pnpm test:ui-review       # screenshot capture, ~55s
+pnpm perf                 # latency suite against dev server
+pnpm perf:prod            # latency suite against production build
 
 cd src-tauri
 cargo fmt --all -- --check
@@ -168,7 +169,7 @@ cargo test --all
 - **New feature**: start in `src/components/` or `src-tauri/src/commands.rs` depending on which layer owns it.
 - **Bug in session lifecycle**: `src-tauri/src/state_engine.rs` (FSM), `src-tauri/src/pty_manager.rs` (spawn + read), `src/store/sessions.ts` (frontend state).
 - **Bug in UI**: `src/components/` — start with the affected component, trace props back to `src/App.tsx`.
-- **Perf regression**: run `npm run perf:prod` locally, compare against the budgets in `tests/perf.spec.ts`.
+- **Perf regression**: run `pnpm perf:prod` locally, compare against the budgets in `tests/perf.spec.ts`.
 
 ## Reference docs
 
