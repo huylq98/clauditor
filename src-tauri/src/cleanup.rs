@@ -73,8 +73,10 @@ mod tests {
                 "hooks": {
                     "Stop": [ { "_clauditor": true, "hooks": [] } ]
                 }
-            })).unwrap(),
-        ).unwrap();
+            }))
+            .unwrap(),
+        )
+        .unwrap();
     }
 
     #[test]
@@ -90,8 +92,9 @@ mod tests {
 
         // Hooks removed.
         let settings: serde_json::Value = serde_json::from_str(
-            &std::fs::read_to_string(home.join(".claude/settings.json")).unwrap()
-        ).unwrap();
+            &std::fs::read_to_string(home.join(".claude/settings.json")).unwrap(),
+        )
+        .unwrap();
         assert!(settings.get("hooks").is_none());
         // App data preserved.
         assert!(app_data.exists());
