@@ -76,11 +76,15 @@ export function tryEnableWebgl(term: Terminal) {
   }
 }
 
-export function probeDims(container: HTMLElement): { cols: number; rows: number } {
+export function probeDims(container?: HTMLElement): { cols: number; rows: number } {
+  const target =
+    container ??
+    document.querySelector<HTMLElement>('[data-terminal-stage]') ??
+    document.body;
   const probe = document.createElement('div');
   probe.style.cssText =
     'position:absolute;visibility:hidden;width:100%;height:100%;pointer-events:none;';
-  container.appendChild(probe);
+  target.appendChild(probe);
   const t = new Terminal({
     fontFamily: '"JetBrains Mono NF", "JetBrains Mono", "Cascadia Mono", monospace',
     fontSize: 13,

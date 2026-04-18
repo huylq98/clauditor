@@ -43,7 +43,7 @@ export default function App() {
 
   const spawnForCwd = useCallback(
     async (cwd: string | null) => {
-      const { cols, rows } = probeDims(document.body);
+      const { cols, rows } = probeDims();
       const s = await api.createSession({ cwd, cols, rows }).catch((e) => {
         toast.error('Failed to start session', { description: String(e) });
         return null;
@@ -178,7 +178,10 @@ export default function App() {
           <Sidebar />
           <main className="relative flex flex-1 min-w-0 flex-col">
             <TabBar onNewSession={newSession} onSelect={setActive} onClose={requestClose} />
-            <div className="relative flex-1 min-h-0 bg-[var(--color-bg)]">
+            <div
+              data-terminal-stage
+              className="relative flex-1 min-h-0 bg-[var(--color-bg)]"
+            >
               {sessions.length === 0 ? (
                 <EmptyState onNewSession={newSession} />
               ) : (
