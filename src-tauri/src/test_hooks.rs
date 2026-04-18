@@ -83,4 +83,18 @@ mod tests {
         std::env::remove_var("CLAUDITOR_TEST_PORT");
         assert_eq!(hook_port(), 27182);
     }
+
+    #[test]
+    fn stop_grace_env_override() {
+        std::env::set_var("CLAUDITOR_TEST_STOP_MS", "750");
+        assert_eq!(stop_grace(), Duration::from_millis(750));
+        std::env::remove_var("CLAUDITOR_TEST_STOP_MS");
+    }
+
+    #[test]
+    fn hook_port_env_override() {
+        std::env::set_var("CLAUDITOR_TEST_PORT", "47000");
+        assert_eq!(hook_port(), 47000);
+        std::env::remove_var("CLAUDITOR_TEST_PORT");
+    }
 }
