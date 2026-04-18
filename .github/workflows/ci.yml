@@ -43,7 +43,7 @@ jobs:
               - 'public/**'
               - 'site/**'
               - 'package.json'
-              - 'package-lock.json'
+              - 'pnpm-lock.yaml'
               - 'playwright.config.*'
               - 'vite.config.ts'
               - 'tsconfig*.json'
@@ -79,41 +79,45 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
+          cache: pnpm
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
 
       - name: Type-check
-        run: npx tsc -b
+        run: pnpm exec tsc -b
 
       - name: Production build
-        run: npm run build
+        run: pnpm run build
 
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             playwright-${{ runner.os }}-
 
       - name: Install Playwright (browsers cached if hit)
         run: |
           if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
-            npx playwright install-deps chromium
+            pnpm exec playwright install-deps chromium
           else
-            npx playwright install chromium --with-deps
+            pnpm exec playwright install chromium --with-deps
           fi
 
       - name: Smoke tests
-        run: npm run test:smoke
+        run: pnpm run test:smoke
 
       - name: UI review (screenshot capture)
-        run: npm run test:ui-review
+        run: pnpm run test:ui-review
 
       - name: Upload UI review screenshots
         if: always()
@@ -143,32 +147,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
+          cache: pnpm
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
 
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             playwright-${{ runner.os }}-
 
       - name: Install Playwright
         run: |
           if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
-            npx playwright install-deps chromium
+            pnpm exec playwright install-deps chromium
           else
-            npx playwright install chromium --with-deps
+            pnpm exec playwright install chromium --with-deps
           fi
 
       - name: Run perf suite against production build
-        run: npm run perf:prod
+        run: pnpm run perf:prod
 
       - name: Upload perf report
         if: always()

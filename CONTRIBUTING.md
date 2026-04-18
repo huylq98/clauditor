@@ -6,6 +6,7 @@ Thanks for your interest. Before you spend time on anything non-trivial, **open 
 
 **Requirements**
 - Node.js **24** ([nvm users: `nvm use`](https://github.com/nvm-sh/nvm))
+- pnpm **10** (`npm install -g pnpm` or via `corepack enable`)
 - Rust **1.80+** via [rustup](https://rustup.rs/)
 - On Windows: MSVC Build Tools (rustup prompts you)
 - On Linux: `webkit2gtk-4.1-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`, `build-essential`
@@ -14,8 +15,8 @@ Thanks for your interest. Before you spend time on anything non-trivial, **open 
 ```bash
 git clone https://github.com/huylq98/clauditor.git
 cd clauditor
-npm install
-npm run tauri dev
+pnpm install
+pnpm tauri dev
 ```
 
 ## Branching
@@ -49,10 +50,10 @@ Allowed prefixes: `feat`, `fix`, `docs`, `ci`, `perf`, `refactor`, `test`, `deps
 ## Testing
 
 ```bash
-npm run test:smoke      # renders + core flows, ~5s
-npm run test:ui-review  # screenshot capture, ~55s
-npm run perf            # latency suite (dev server)
-npm run perf:prod       # latency suite (prod build)
+pnpm test:smoke         # renders + core flows, ~5s
+pnpm test:ui-review     # screenshot capture, ~55s
+pnpm perf               # latency suite (dev server)
+pnpm perf:prod          # latency suite (prod build)
 
 cd src-tauri
 cargo test --all

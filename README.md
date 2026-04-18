@@ -63,12 +63,13 @@ Or grab the latest artifact from the [**Releases page**](https://github.com/huyl
 ```bash
 git clone https://github.com/huylq98/clauditor.git
 cd clauditor
-npm install
-npm run tauri dev
+pnpm install
+pnpm tauri dev
 ```
 
 **Requirements:**
-- Node.js 20+
+- Node.js 24+ (see `.nvmrc`)
+- pnpm 10+ (`npm install -g pnpm`)
 - Rust 1.80+ ([rustup.rs](https://rustup.rs/))
 - On Windows: MSVC Build Tools (rustup prompts you)
 - On Linux: `webkit2gtk-4.1`, `libayatana-appindicator3-dev`, `librsvg2-dev`
@@ -173,15 +174,15 @@ Have a request? [**Open an issue**](https://github.com/huylq98/clauditor/issues/
 ## Development
 
 ```bash
-npm run tauri dev      # launch in dev mode (vite + rust, HMR)
-npm run tauri build    # build signed installers into src-tauri/target/release/bundle/
+pnpm tauri dev         # launch in dev mode (vite + rust, HMR)
+pnpm tauri build       # build signed installers into src-tauri/target/release/bundle/
 
-npm test               # all Playwright specs (browser + mock backend)
-npm run test:smoke     # renders + basic flows
-npm run test:ui-review # capture 10 reference screenshots to tests/artifacts/review/
-npm run perf           # latency suite against dev server
-npm run perf:prod      # latency suite against the production build
-npm run lint           # ESLint
+pnpm test              # all Playwright specs (browser + mock backend)
+pnpm test:smoke        # renders + basic flows
+pnpm test:ui-review    # capture 10 reference screenshots to tests/artifacts/review/
+pnpm perf              # latency suite against dev server
+pnpm perf:prod         # latency suite against the production build
+pnpm lint              # ESLint
 ```
 
 PRs welcome. For anything non-trivial, open an issue first so we can align on direction before you spend time on code.
