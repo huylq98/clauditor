@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { api } from '@/lib/ipc';
 import { useTree } from '@/store/tree';
 import type { ActivitySnapshot, SessionId } from '@/lib/bindings';
@@ -33,16 +33,23 @@ export function ActivityPanel({ sessionId }: ActivityPanelProps) {
     };
   }, [sessionId, setActivity]);
 
-  const tools = Object.entries(activity.tools)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
+  const tools = useMemo(
+    () =>
+      Object.entries(activity.tools)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5),
+    [activity.tools],
+  );
   const maxTool = tools[0]?.[1] ?? 0;
 
-  const summary = [
-    { label: 'created', value: activity.created.length, tone: 'ok' as const },
-    { label: 'modified', value: activity.modified.length, tone: 'warn' as const },
-    { label: 'deleted', value: activity.deleted.length, tone: 'danger' as const },
-  ];
+  const summary = useMemo(
+    () => [
+      { label: 'created', value: activity.created.length, tone: 'ok' as const },
+      { label: 'modified', value: activity.modified.length, tone: 'warn' as const },
+      { label: 'deleted', value: activity.deleted.length, tone: 'danger' as const },
+    ],
+    [activity.created.length, activity.modified.length, activity.deleted.length],
+  );
 
   return (
     <div className="flex flex-col gap-2 p-3 text-[11px]">

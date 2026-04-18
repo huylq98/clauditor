@@ -19,6 +19,12 @@ export function FileTree({ sessionId }: FileTreeProps) {
   const query = bucket?.query ?? '';
 
   useEffect(() => {
+    // `cancelled` guards the setState after the IPC resolves. If the user
+    // switches tabs mid-flight (or unmounts), we discard the stale tree
+    // list instead of overwriting the next session's entries. The Tauri
+    // IPC itself doesn't support cancellation, but the wasted decode is
+    // a few KB at most — the important thing is we don't flash the wrong
+    // tree into the UI.
     let cancelled = false;
     api
       .listTree(sessionId, '')
