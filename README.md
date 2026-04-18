@@ -154,6 +154,15 @@ idle ◀─(5 min)── (any) ────────▶ running
 
 </details>
 
+## Developer docs
+
+- [**`docs/ARCHITECTURE.md`**](./docs/ARCHITECTURE.md) — deep-dive on the two-process worldview, IPC contract, session FSM, hook protocol, persistence.
+- [**`docs/adr/`**](./docs/adr/) — Architecture Decision Records explaining the *why* behind Tauri-over-Electron, pnpm, the `ci-gate` pattern, etc.
+- [**`docs/perf-budgets.md`**](./docs/perf-budgets.md) — latency budgets baked into the CI perf suite (RAIL, Web Vitals INP, desktop-app conventions).
+- [**`CONTRIBUTING.md`**](./CONTRIBUTING.md) — setup, branching, commits, test matrix.
+- [**`SECURITY.md`**](./SECURITY.md) — threat model + vulnerability reporting.
+- [**`CLAUDE.md`**](./CLAUDE.md) / [**`AGENTS.md`**](./AGENTS.md) — guide for AI agents working on this repo.
+
 ## Roadmap
 
 - [x] Persist session layout + names across restarts
