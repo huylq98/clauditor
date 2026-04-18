@@ -94,6 +94,23 @@ fn parse_skill_md(path: &std::path::Path) -> Result<(String, String, Option<Stri
     Ok((name, description, when_to_use))
 }
 
+fn parse_md_with_frontmatter(path: &std::path::Path) -> Result<(String, String, Option<String>)> {
+    let text = std::fs::read_to_string(path).context("read file")?;
+    let (fm_text, body) = split_frontmatter(&text).context("missing frontmatter")?;
+    let fm: Frontmatter = serde_yaml_ng::from_str(fm_text).context("parse frontmatter yaml")?;
+    let name = fm
+        .name
+        .or_else(|| {
+            path.file_stem()
+                .and_then(|s| s.to_str())
+                .map(|s| s.to_string())
+        })
+        .context("missing name")?;
+    let description = fm.description.unwrap_or_default();
+    let when_to_use = fm.when_to_use.or_else(|| first_paragraph(body));
+    Ok((name, description, when_to_use))
+}
+
 fn scan_plugin_skills(
     claude_dir: &std::path::Path,
     out: &mut Vec<Capability>,
@@ -157,6 +174,98 @@ fn scan_plugin_skills(
     }
 }
 
+fn scan_plugin_subagents(
+    claude_dir: &std::path::Path,
+    out: &mut Vec<Capability>,
+    warnings: &mut Vec<String>,
+) {
+    let cache = claude_dir.join("plugins").join("cache");
+    let Ok(marketplaces) = std::fs::read_dir(&cache) else {
+        return;
+    };
+    for mp in marketplaces.flatten() {
+        let mp_name = mp.file_name().to_string_lossy().into_owned();
+        let Ok(plugins) = std::fs::read_dir(mp.path()) else {
+            continue;
+        };
+        for plugin in plugins.flatten() {
+            let plugin_name = plugin.file_name().to_string_lossy().into_owned();
+            let Ok(versions) = std::fs::read_dir(plugin.path()) else {
+                continue;
+            };
+            for version in versions.flatten() {
+                let version_name = version.file_name().to_string_lossy().into_owned();
+                let agents_dir = version.path().join("agents");
+                let Ok(agent_files) = std::fs::read_dir(&agents_dir) else {
+                    continue;
+                };
+                for agent_file in agent_files.flatten() {
+                    let path = agent_file.path();
+                    if path.extension().and_then(|e| e.to_str()) != Some("md") {
+                        continue;
+                    }
+                    match parse_md_with_frontmatter(&path) {
+                        Ok((name, description, when_to_use)) => {
+                            out.push(Capability {
+                                id: format!(
+                                    "subagent:plugin:{}/{}/{}:{}",
+                                    mp_name, plugin_name, version_name, name
+                                ),
+                                kind: CapabilityKind::Subagent,
+                                invocation: format!("Use the {} agent to ...", name),
+                                name,
+                                description,
+                                when_to_use,
+                                source: Source::Plugin {
+                                    marketplace: mp_name.clone(),
+                                    plugin: plugin_name.clone(),
+                                    version: version_name.clone(),
+                                },
+                            });
+                        }
+                        Err(e) => warnings.push(format!(
+                            "skipped subagent at {}: {:#}",
+                            path.display(),
+                            e
+                        )),
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn scan_user_subagents(
+    claude_dir: &std::path::Path,
+    out: &mut Vec<Capability>,
+    warnings: &mut Vec<String>,
+) {
+    let dir = claude_dir.join("agents");
+    let Ok(files) = std::fs::read_dir(&dir) else {
+        return;
+    };
+    for f in files.flatten() {
+        let path = f.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("md") {
+            continue;
+        }
+        match parse_md_with_frontmatter(&path) {
+            Ok((name, description, when_to_use)) => {
+                out.push(Capability {
+                    id: format!("subagent:user:{}", name),
+                    kind: CapabilityKind::Subagent,
+                    invocation: format!("Use the {} agent to ...", name),
+                    name,
+                    description,
+                    when_to_use,
+                    source: Source::User { dir: dir.clone() },
+                });
+            }
+            Err(e) => warnings.push(format!("skipped subagent at {}: {:#}", path.display(), e)),
+        }
+    }
+}
+
 // (false, _) < (true, _): "unknown" always ranks below any real version string.
 fn version_rank(v: &str) -> impl Ord + '_ {
     (v != "unknown", v)
@@ -206,6 +315,8 @@ pub fn list_capabilities(claude_dir: &std::path::Path) -> CapabilitiesSnapshot {
     let mut items = Vec::new();
     let mut parse_warnings = Vec::new();
     scan_plugin_skills(claude_dir, &mut items, &mut parse_warnings);
+    scan_plugin_subagents(claude_dir, &mut items, &mut parse_warnings);
+    scan_user_subagents(claude_dir, &mut items, &mut parse_warnings);
     dedup_by_greatest_version(&mut items);
     CapabilitiesSnapshot {
         items,
@@ -301,5 +412,30 @@ mod tests {
             skill.when_to_use.as_deref(),
             Some("Use this when you want to test body-paragraph fallback.")
         );
+    }
+
+    #[test]
+    fn parses_plugin_subagent() {
+        let snap = list_capabilities(&fixture("subagent_plugin"));
+        let agent = snap
+            .items
+            .iter()
+            .find(|c| c.kind == CapabilityKind::Subagent)
+            .unwrap();
+        assert_eq!(agent.name, "code-reviewer");
+        assert_eq!(agent.description, "Reviews PRs for style and correctness.");
+        assert!(agent.invocation.contains("code-reviewer"));
+    }
+
+    #[test]
+    fn parses_user_subagent() {
+        let snap = list_capabilities(&fixture("subagent_user"));
+        let agent = snap
+            .items
+            .iter()
+            .find(|c| c.kind == CapabilityKind::Subagent)
+            .unwrap();
+        assert_eq!(agent.name, "explorer");
+        assert!(matches!(&agent.source, Source::User { .. }));
     }
 }
