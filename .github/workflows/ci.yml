@@ -8,34 +8,111 @@ on:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   # ─────────────────────────────────────────────────────────────────
-  # Frontend: typecheck, bundle, smoke + UI-review e2e tests.
-  # Required for merge.
+  # Path-based change detection. Every downstream job gates on these
+  # outputs so doc-only PRs don't rebuild the Rust matrix.
+  # Skipped jobs still register a "skipped" status, which branch
+  # protection treats as passed for required checks.
   # ─────────────────────────────────────────────────────────────────
-  frontend:
+  filter:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      frontend: ${{ steps.f.outputs.frontend }}
+      backend: ${{ steps.f.outputs.backend }}
+      workflows: ${{ steps.f.outputs.workflows }}
     steps:
       - uses: actions/checkout@v4
+      - id: f
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            frontend:
+              - 'src/**'
+              - 'tests/**'
+              - 'public/**'
+              - 'site/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'playwright.config.*'
+              - 'vite.config.ts'
+              - 'tsconfig*.json'
+              - 'index.html'
+              - 'eslint.config.js'
+            backend:
+              - 'src-tauri/**'
+            workflows:
+              - '.github/workflows/**'
+
+  # ─────────────────────────────────────────────────────────────────
+  # Lint the workflow YAMLs themselves. Fast guard against typos.
+  # ─────────────────────────────────────────────────────────────────
+  actionlint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install actionlint
+        run: |
+          bash <(curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+      - name: Lint workflows
+        run: ./actionlint -color
+
+  # ─────────────────────────────────────────────────────────────────
+  # Frontend: typecheck, bundle, smoke + UI-review e2e tests.
+  # ─────────────────────────────────────────────────────────────────
+  frontend:
+    needs: filter
+    if: needs.filter.outputs.frontend == 'true' || needs.filter.outputs.workflows == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
+
       - run: npm ci
+
       - name: Type-check
         run: npx tsc -b
+
       - name: Production build
         run: npm run build
-      - name: Install Playwright browsers
-        run: npx playwright install chromium --with-deps
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright (browsers cached if hit)
+        run: |
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+            npx playwright install-deps chromium
+          else
+            npx playwright install chromium --with-deps
+          fi
+
       - name: Smoke tests
         run: npm run test:smoke
+
       - name: UI review (screenshot capture)
         run: npm run test:ui-review
+
       - name: Upload UI review screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -43,7 +120,8 @@ jobs:
           name: ui-review-screenshots
           path: tests/artifacts/review/
           if-no-files-found: ignore
-      - name: Upload Playwright HTML report
+
+      - name: Upload Playwright HTML report on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
@@ -52,25 +130,44 @@ jobs:
           if-no-files-found: ignore
 
   # ─────────────────────────────────────────────────────────────────
-  # Perf suite: runs against the production build. Timing-sensitive,
-  # so we *report* numbers but don't block merge on them — CI runners
-  # have highly variable CPU.
+  # Perf suite: informational (continue-on-error).
   # ─────────────────────────────────────────────────────────────────
   perf:
+    needs: [filter, frontend]
+    if: needs.filter.outputs.frontend == 'true' || needs.filter.outputs.workflows == 'true'
     runs-on: ubuntu-latest
-    needs: frontend
+    timeout-minutes: 10
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
+
       - run: npm ci
-      - name: Install Playwright browsers
-        run: npx playwright install chromium --with-deps
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright
+        run: |
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+            npx playwright install-deps chromium
+          else
+            npx playwright install chromium --with-deps
+          fi
+
       - name: Run perf suite against production build
         run: npm run perf:prod
+
       - name: Upload perf report
         if: always()
         uses: actions/upload-artifact@v4
@@ -80,15 +177,17 @@ jobs:
           if-no-files-found: ignore
 
   # ─────────────────────────────────────────────────────────────────
-  # Backend: fmt + clippy + tests on all three target OSes.
-  # Required for merge.
+  # Backend: fmt + clippy + tests on Win / macOS / Linux.
   # ─────────────────────────────────────────────────────────────────
   backend:
+    needs: filter
+    if: needs.filter.outputs.backend == 'true' || needs.filter.outputs.workflows == 'true'
     strategy:
       fail-fast: false
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -96,7 +195,15 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev build-essential curl wget file libssl-dev
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libssl-dev
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -117,3 +224,44 @@ jobs:
       - name: cargo test
         working-directory: src-tauri
         run: cargo test --all
+
+  # ─────────────────────────────────────────────────────────────────
+  # Aggregating gate. `main` branch protection requires only this
+  # single check — it fans out to the individual jobs via `needs` and
+  # fails the overall run if any required upstream failed.
+  # Skipped upstream jobs (path-filter excluded) count as passing.
+  # ─────────────────────────────────────────────────────────────────
+  ci-gate:
+    needs: [actionlint, filter, frontend, backend]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require required jobs to succeed or skip
+        run: |
+          set -e
+          actionlint="${{ needs.actionlint.result }}"
+          filter="${{ needs.filter.result }}"
+          frontend="${{ needs.frontend.result }}"
+          backend="${{ needs.backend.result }}"
+
+          echo "actionlint=$actionlint"
+          echo "filter=$filter"
+          echo "frontend=$frontend"
+          echo "backend=$backend"
+
+          # filter + actionlint must always succeed.
+          [ "$actionlint" = "success" ] || { echo "actionlint failed"; exit 1; }
+          [ "$filter" = "success" ] || { echo "filter failed"; exit 1; }
+
+          # frontend + backend may be skipped (path-filter excluded)
+          # but must not have failed.
+          for j in "frontend:$frontend" "backend:$backend"; do
+            name="${j%:*}"; res="${j#*:}"
+            case "$res" in
+              success|skipped) ;;
+              *) echo "$name failed ($res)"; exit 1;;
+            esac
+          done
+
+          echo "All required jobs passed or were skipped."
