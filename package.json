@@ -22,7 +22,13 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "perf": "playwright test tests/perf.spec.ts",
-    "perf:prod": "playwright test --config=playwright.prod.config.ts"
+    "perf:prod": "playwright test --config=playwright.prod.config.ts",
+    "e2e:build:fake": "cargo build --release --manifest-path src-tauri/test-fixtures/fake-claude/Cargo.toml",
+    "e2e:build:app": "cross-env VITE_CLAUDITOR_TEST_HOOKS=1 pnpm tauri build --debug -- --features test-hooks",
+    "e2e:build": "pnpm e2e:build:fake && pnpm e2e:build:app",
+    "e2e": "cd tests/e2e && npm test",
+    "e2e:visual:update": "cd tests/e2e && cross-env UPDATE_BASELINES=1 npm test",
+    "e2e:live": "cd tests/e2e && cross-env CLAUDITOR_E2E_LIVE=1 npm test"
   },
   "dependencies": {
     "@radix-ui/react-context-menu": "^2.2.6",
@@ -74,6 +80,7 @@
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.0",
     "vite": "^8.0.4",
-    "vitest": "^2.1.9"
+    "vitest": "^2.1.9",
+    "cross-env": "^7.0.3"
   }
 }

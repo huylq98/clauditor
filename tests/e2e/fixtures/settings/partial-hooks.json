@@ -1,0 +1,7 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [{"hooks":[{"type":"command","command":"present"}]}],
+    "PreToolUse": [{"hooks":[{"type":"command","command":"present"}]}],
+    "PostToolUse": [{"hooks":[{"type":"command","command":"present"}]}]
+  }
+}

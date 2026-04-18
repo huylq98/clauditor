@@ -23,6 +23,7 @@ export function ShortcutsDialog({ open, onOpenChange }: ShortcutsDialogProps) {
           )}
         />
         <Dialog.Content
+          data-region="overlay"
           className={cn(
             'fixed left-1/2 top-1/2 z-50 w-[min(520px,90vw)] -translate-x-1/2 -translate-y-1/2',
             'rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-panel)]',

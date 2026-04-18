@@ -13,6 +13,8 @@ mod pty_manager;
 mod session_store;
 mod settings_installer;
 mod state_engine;
+#[cfg(feature = "test-hooks")]
+mod test_hooks;
 mod tray;
 mod types;
 
@@ -159,28 +161,62 @@ pub fn run() {
                 api.prevent_close();
             }
         })
-        .invoke_handler(tauri::generate_handler![
-            commands::sessions_list,
-            commands::sessions_create,
-            commands::sessions_kill,
-            commands::sessions_restart,
-            commands::sessions_forget,
-            commands::sessions_rename,
-            commands::sessions_write,
-            commands::sessions_resize,
-            commands::sessions_buffer,
-            commands::sessions_kill_all,
-            commands::sessions_restart_all_exited,
-            commands::sessions_forget_all_exited,
-            commands::tree_list,
-            commands::file_read,
-            commands::activity_snapshot,
-            commands::dialog_pick_directory,
-            commands::get_preferences,
-            commands::set_preferences,
-            commands::read_installed_hooks,
-            commands::reinstall_hooks,
-        ])
+        .invoke_handler({
+            #[cfg(feature = "test-hooks")]
+            {
+                tauri::generate_handler![
+                    commands::sessions_list,
+                    commands::sessions_create,
+                    commands::sessions_kill,
+                    commands::sessions_restart,
+                    commands::sessions_forget,
+                    commands::sessions_rename,
+                    commands::sessions_write,
+                    commands::sessions_resize,
+                    commands::sessions_buffer,
+                    commands::sessions_kill_all,
+                    commands::sessions_restart_all_exited,
+                    commands::sessions_forget_all_exited,
+                    commands::tree_list,
+                    commands::file_read,
+                    commands::activity_snapshot,
+                    commands::dialog_pick_directory,
+                    commands::get_preferences,
+                    commands::set_preferences,
+                    commands::read_installed_hooks,
+                    commands::reinstall_hooks,
+                    crate::test_hooks::dump_fsm,
+                    crate::test_hooks::list_pids,
+                    crate::test_hooks::hook_token,
+                    crate::test_hooks::hook_port_cmd,
+                ]
+            }
+            #[cfg(not(feature = "test-hooks"))]
+            {
+                tauri::generate_handler![
+                    commands::sessions_list,
+                    commands::sessions_create,
+                    commands::sessions_kill,
+                    commands::sessions_restart,
+                    commands::sessions_forget,
+                    commands::sessions_rename,
+                    commands::sessions_write,
+                    commands::sessions_resize,
+                    commands::sessions_buffer,
+                    commands::sessions_kill_all,
+                    commands::sessions_restart_all_exited,
+                    commands::sessions_forget_all_exited,
+                    commands::tree_list,
+                    commands::file_read,
+                    commands::activity_snapshot,
+                    commands::dialog_pick_directory,
+                    commands::get_preferences,
+                    commands::set_preferences,
+                    commands::read_installed_hooks,
+                    commands::reinstall_hooks,
+                ]
+            }
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
