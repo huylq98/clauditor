@@ -32,6 +32,8 @@ test.describe('UpdateBanner', () => {
     // The available-state text must go away after install is clicked; the banner
     // will then be in one of: downloading (transient), ready, or error.
     await expect(availableText).toBeHidden({ timeout: 5000 });
+    // And must NOT be in the error state — absence is the real success signal.
+    await expect(page.getByText(/Update failed:/)).toHaveCount(0);
   });
 
   test('dismiss hides the banner for the rest of the session', async ({ page }) => {
