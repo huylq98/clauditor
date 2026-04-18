@@ -46,6 +46,11 @@
       "wix": {
         "fragmentPaths": ["installer/windows/wix/cleanup-fragment.wxs"]
       }
+    },
+    "linux": {
+      "deb": {
+        "postRemoveScript": "installer/linux/debian/postrm"
+      }
     }
   }
 }
