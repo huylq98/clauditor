@@ -1,101 +1,102 @@
-<!-- gitnexus:start -->
-# GitNexus — Code Intelligence
+# Clauditor — AI agent guide
 
-This project is indexed by GitNexus as **clauditor** (534 symbols, 1145 relationships, 43 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+> This file is a shared reference for any AI agent working on this repo.
+> **`AGENTS.md`** mirrors this content so agents that follow the `agents.md`
+> convention pick it up too.
 
-> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
+## What this project is
 
-## Always Do
+Clauditor is a cross-platform desktop manager for running multiple **Claude Code** CLI sessions in parallel. It spawns the real `claude` binary inside a PTY per session, tracks live state via Claude Code's own lifecycle hooks, and presents everything in a tabbed native window.
 
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
+## Tech stack
 
-## When Debugging
+- **Shell**: Tauri 2 (Rust + system webview)
+- **Backend (Rust, `src-tauri/`)**: `tokio`, `portable-pty`, `notify`, `axum`, `serde_json`, `parking_lot`
+- **Frontend (TypeScript, `src/`)**: React 19, Vite 6, Tailwind v4, Zustand, xterm.js, Radix UI, `cmdk`, Framer Motion, Sonner
+- **Tests**: Playwright (browser + mock backend), `cargo test`
+- **CI**: GitHub Actions matrix on Windows / macOS / Linux (x64 + arm64)
 
-1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
-2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
-3. `READ gitnexus://repo/clauditor/process/{processName}` — trace the full execution flow step by step
-4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
+Full dependency list: `package.json` + `src-tauri/Cargo.toml`.
 
-## When Refactoring
+## Key directories
 
-- **Renaming**: MUST use `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` first. Review the preview — graph edits are safe, text_search edits need manual review. Then run with `dry_run: false`.
-- **Extracting/Splitting**: MUST run `gitnexus_context({name: "target"})` to see all incoming/outgoing refs, then `gitnexus_impact({target: "target", direction: "upstream"})` to find all external callers before moving code.
-- After any refactor: run `gitnexus_detect_changes({scope: "all"})` to verify only expected files changed.
+```
+src/                      React frontend
+  components/             UI primitives + composed components
+  hooks/                  Keyboard shortcuts, etc.
+  lib/                    ipc.ts, bindings.ts, terminal.ts, utils.ts, mock.ts
+  store/                  Zustand slices (sessions, tree, ui, recentCwds)
+  styles/                 Tailwind v4 @theme tokens + globals
 
-## Never Do
+src-tauri/                Rust backend
+  src/
+    main.rs / lib.rs      Entry + builder
+    commands.rs           #[tauri::command] exports
+    types.rs              Shared serializable types
+    pty_manager.rs        portable-pty spawn/read/write/resize
+    state_engine.rs       Per-session FSM (7 states)
+    hook_server.rs        axum HTTP server on 127.0.0.1:27182
+    file_watcher.rs       notify-based per-session recursive watcher
+    activity_service.rs   Tool-call activity aggregation
+    session_store.rs      serde_json persistence (atomic tmp→rename)
+    settings_installer.rs ~/.claude/settings.json hook installer
+    tray.rs               System tray
+  tauri.conf.json         App config, bundle targets
+  capabilities/*.json     Tauri 2 capabilities
 
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
-
-## Tools Quick Reference
-
-| Tool | When to use | Command |
-|------|-------------|---------|
-| `query` | Find code by concept | `gitnexus_query({query: "auth validation"})` |
-| `context` | 360-degree view of one symbol | `gitnexus_context({name: "validateUser"})` |
-| `impact` | Blast radius before editing | `gitnexus_impact({target: "X", direction: "upstream"})` |
-| `detect_changes` | Pre-commit scope check | `gitnexus_detect_changes({scope: "staged"})` |
-| `rename` | Safe multi-file rename | `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` |
-| `cypher` | Custom graph queries | `gitnexus_cypher({query: "MATCH ..."})` |
-
-## Impact Risk Levels
-
-| Depth | Meaning | Action |
-|-------|---------|--------|
-| d=1 | WILL BREAK — direct callers/importers | MUST update these |
-| d=2 | LIKELY AFFECTED — indirect deps | Should test |
-| d=3 | MAY NEED TESTING — transitive | Test if critical path |
-
-## Resources
-
-| Resource | Use for |
-|----------|---------|
-| `gitnexus://repo/clauditor/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/clauditor/clusters` | All functional areas |
-| `gitnexus://repo/clauditor/processes` | All execution flows |
-| `gitnexus://repo/clauditor/process/{name}` | Step-by-step execution trace |
-
-## Self-Check Before Finishing
-
-Before completing any code modification task, verify:
-1. `gitnexus_impact` was run for all modified symbols
-2. No HIGH/CRITICAL risk warnings were ignored
-3. `gitnexus_detect_changes()` confirms changes match expected scope
-4. All d=1 (WILL BREAK) dependents were updated
-
-## Keeping the Index Fresh
-
-After committing code changes, the GitNexus index becomes stale. Re-run analyze to update it:
-
-```bash
-npx gitnexus analyze
+tests/                    Playwright specs
+site/                     GitHub Pages download landing page
+.github/workflows/        CI, Release, Pages, OSSF Scorecard, Claude bots
 ```
 
-If the index previously included embeddings, preserve them by adding `--embeddings`:
+## Commands
 
 ```bash
-npx gitnexus analyze --embeddings
+npm run tauri dev         # launch app in dev mode (HMR)
+npm run tauri build       # build signed installers
+npm run build             # frontend-only build
+npm run lint              # ESLint
+
+npm run test              # full Playwright suite
+npm run test:smoke        # core flows, ~5s
+npm run test:ui-review    # screenshot capture, ~55s
+npm run perf              # latency suite against dev server
+npm run perf:prod         # latency suite against production build
+
+cd src-tauri
+cargo fmt --all -- --check
+cargo clippy --all-targets -- -D warnings
+cargo test --all
 ```
 
-To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.embeddings` field shows the count (0 means no embeddings). **Running analyze without `--embeddings` will delete any previously generated embeddings.**
+## Conventions
 
-> Claude Code users: A PostToolUse hook handles this automatically after `git commit` and `git merge`.
+- **Commits**: `<type>(<scope>): <subject>` — types: `feat`, `fix`, `docs`, `ci`, `perf`, `refactor`, `test`, `deps`, `chore`.
+- **Branches**: `feat/<slug>`, `fix/<slug>`, `ci/<slug>`, `docs/<slug>`.
+- **PRs**: required check is the aggregating `ci-gate`. The `perf` job is informational. Dependabot patch/minor PRs auto-merge.
+- **Writing code**: no comments unless the *why* is non-obvious. Prefer deleting dead code over annotating it.
+- **Writing tests**: smoke/UI tests use the browser mock backend (`src/lib/mock.ts`). Real-PTY tests would need `tauri-driver` (not set up yet).
 
-## CLI
+## Architectural invariants
 
-| Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
+- **Hook server** listens only on `127.0.0.1:27182` and gates on a per-launch bearer token in the `X-Clauditor-Token` header.
+- **Session attribution** on hook callbacks uses the parent PID of the hook process, NOT env vars — env vars leak to descendant processes and would misattribute grandchildren.
+- **`~/.claude/settings.json`** hook format is byte-compatible between Clauditor's Electron era and Tauri era. Changing the hook payload shape is a breaking change for users on older Clauditor versions.
+- **Keyboard shortcuts** attach via `window.addEventListener('keydown', handler, true)` (capture phase). xterm otherwise swallows `⌘K` / `⌘T` / `⌘B` / `⌘F` etc. when the terminal is focused.
+- **State derivations** in the UI — use primitive Zustand selectors (`s.order`, `s.byId`) + `useMemo`, never selectors that build fresh objects each call. Infinite-loop risk from React's `useSyncExternalStore`.
+- **TerminalHost** stays mounted per session for its lifetime; visibility toggles via CSS. Never unmount-then-remount on tab switch — xterm scrollback would be destroyed.
 
-<!-- gitnexus:end -->
+## Where to look first
+
+- **New feature**: start in `src/components/` or `src-tauri/src/commands.rs` depending on which layer owns it.
+- **Bug in session lifecycle**: `src-tauri/src/state_engine.rs` (FSM), `src-tauri/src/pty_manager.rs` (spawn + read), `src/store/sessions.ts` (frontend state).
+- **Bug in UI**: `src/components/` — start with the affected component, trace props back to `src/App.tsx`.
+- **Perf regression**: run `npm run perf:prod` locally, compare against the budgets in `tests/perf.spec.ts`.
+
+## Reference docs
+
+- `README.md` — user-facing intro and install.
+- `CONTRIBUTING.md` — setup, branching, commits, test matrix.
+- `CHANGELOG.md` — release history.
+- `SECURITY.md` — vulnerability reporting + threat model.
+- Design specs: `docs/superpowers/specs/*.md` (gitignored by design; local-only).
