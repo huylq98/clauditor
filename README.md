@@ -87,6 +87,18 @@ Clauditor's installers clean up their own hooks so you don't leave stale entries
 |  | `sudo apt purge clauditor` | Binary + hooks + `~/.local/share/dev.clauditor.app`. |
 | macOS | Drag `Clauditor.app` to Trash | Binary only. Hooks cleanup is tracked in a follow-up; until then, hand-edit `~/.claude/settings.json` and remove entries with `"_clauditor": true`. |
 
+## Updates
+
+Clauditor checks for a newer release on every launch. If one is available, a dismissable banner above the tab bar offers a one-click install; you can also trigger a check on demand from the system-tray menu ("Check for updates…").
+
+- **Windows (NSIS `.exe`)** — updates install silently with a small progress bar. No UAC prompt per update.
+- **Windows (MSI)** — updates require one UAC prompt per install (unavoidable on MSI).
+- **macOS / Linux** — update downloads, verifies the minisign signature, installs in-place, then relaunches.
+
+Every release is signed with a minisign keypair; the public key is baked into the app binary. Tampered updates are rejected by the signature check.
+
+**Enterprise opt-out:** build with `cargo tauri build --no-default-features --features msi-only` to compile the updater plugin out entirely. Users of such builds stay on their current version and upgrade by downloading a new MSI manually.
+
 ## Keyboard shortcuts
 
 Press `Ctrl/⌘+/` inside the app to open the full cheat sheet.
@@ -186,8 +198,8 @@ idle ◀─(5 min)── (any) ────────▶ running
 - [x] Terminal scrollback search
 - [x] Undo on forget
 - [x] Full uninstall support across Windows (MSI + NSIS) and Debian (`.deb`)
+- [x] Auto-updater via `tauri-plugin-updater` (signed releases) — silent on NSIS, one UAC prompt per MSI update
 - [ ] Light mode (tokens are wired; needs a toggle)
-- [ ] Auto-updater via `tauri-plugin-updater` (signed releases)
 - [ ] Per-session themes / accent colors
 - [ ] Resumable sessions backed by Claude Code's session history
 

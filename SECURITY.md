@@ -25,7 +25,7 @@ Include:
 | Latest release | ✅ |
 | Older releases | No — please upgrade. |
 
-Clauditor is a desktop app, not a hosted service. Security patches are delivered as a new release; auto-updater will pick them up once signing is enabled.
+Clauditor is a desktop app, not a hosted service. Security patches are delivered as a new release; the in-app auto-updater installs them on next launch (or on-demand via the tray's "Check for updates…" entry). Every release is signed with minisign; the public key is baked into the binary, so tampered updates are refused at install time.
 
 ## Threat model
 
