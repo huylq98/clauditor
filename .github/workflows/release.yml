@@ -104,7 +104,7 @@ jobs:
 
       - name: Build Tauri bundle
         id: bundle
-        uses: tauri-apps/tauri-action@v0.5
+        uses: tauri-apps/tauri-action@v0.6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
