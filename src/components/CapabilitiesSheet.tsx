@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { toast } from 'sonner';
 import { useCapabilitiesStore } from '@/store/capabilities';
@@ -43,11 +44,22 @@ export function CapabilitiesSheet() {
   const error = useCapabilitiesStore((s) => s.error);
   const query = useCapabilitiesStore((s) => s.query);
   const kindFilter = useCapabilitiesStore((s) => s.kindFilter);
-  const warningsCount = useCapabilitiesStore((s) => s.warningsCount());
-  const items = useCapabilitiesStore((s) => s.filtered());
+  const snapshot = useCapabilitiesStore((s) => s.snapshot);
   const closeSheet = useCapabilitiesStore((s) => s.closeSheet);
   const setQuery = useCapabilitiesStore((s) => s.setQuery);
   const toggleKind = useCapabilitiesStore((s) => s.toggleKind);
+
+  const warningsCount = useMemo(() => snapshot?.parseWarnings.length ?? 0, [snapshot]);
+  const items = useMemo(() => {
+    if (!snapshot) return [];
+    const q = query.trim().toLowerCase();
+    return snapshot.items.filter((c) => {
+      if (!kindFilter.has(c.kind)) return false;
+      if (!q) return true;
+      const hay = `${c.name} ${c.description} ${c.whenToUse ?? ''}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [snapshot, query, kindFilter]);
 
   return (
     <Dialog.Root open={open} onOpenChange={(v) => !v && closeSheet()} modal={false}>
