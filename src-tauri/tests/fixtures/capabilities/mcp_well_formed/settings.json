@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["@context7/mcp-server"]
+    },
+    "filesystem": {
+      "command": "mcp-fs",
+      "description": "Local filesystem access"
+    }
+  }
+}

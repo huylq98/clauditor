@@ -276,3 +276,11 @@ pub fn reinstall_hooks() -> Result<(), String> {
         .map(|_| ())
         .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub fn list_capabilities() -> crate::capabilities::CapabilitiesSnapshot {
+    let claude_dir = dirs::home_dir()
+        .map(|h| h.join(".claude"))
+        .unwrap_or_else(|| std::path::PathBuf::from(".claude"));
+    crate::capabilities::list_capabilities(&claude_dir)
+}

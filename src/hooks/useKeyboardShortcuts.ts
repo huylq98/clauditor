@@ -3,6 +3,7 @@ import { useSessions } from '@/store/sessions';
 import { useUi } from '@/store/ui';
 import { useKeymap } from '@/store/keymap';
 import { matchesChord, type ActionId } from '@/lib/keymap';
+import { useCapabilitiesStore } from '@/store/capabilities';
 
 interface ShortcutHandlers {
   onNewSession: () => void;
@@ -36,6 +37,7 @@ export function useKeyboardShortcuts({
       }
       if (match('shortcuts-cheatsheet')) { e.preventDefault(); onShowShortcuts(); return; }
       if (match('settings')) { e.preventDefault(); onShowSettings(); return; }
+      if (match('browse-capabilities')) { e.preventDefault(); useCapabilitiesStore.getState().openSheet(); return; }
       if (match('next-tab') || match('prev-tab')) {
         e.preventDefault();
         const { order, activeId } = useSessions.getState();
