@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { CommandPalette } from '@/components/CommandPalette';
 import { ShortcutsDialog } from '@/components/ShortcutsDialog';
 import { SettingsDialog } from '@/components/SettingsDialog';
+import { CapabilitiesSheet } from '@/components/CapabilitiesSheet';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { api, on } from '@/lib/ipc';
@@ -229,6 +230,7 @@ export default function App() {
         />
         <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
         <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+        <CapabilitiesSheet />
         <AlertDialog
           open={killTarget !== null}
           onOpenChange={(v) => !v && setKillTarget(null)}
