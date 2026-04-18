@@ -248,6 +248,32 @@ export const mock = {
         for (const e of mockInstalledHooks.entries) e.status = 'present';
         return undefined as unknown as T;
 
+      case 'list_capabilities':
+        return {
+          items: [
+            {
+              id: 'skill:plugin:mp/p/1.0.0:demo',
+              kind: 'skill',
+              name: 'demo',
+              description: 'A demo skill.',
+              whenToUse: 'Use when running the smoke test.',
+              source: { type: 'plugin', marketplace: 'mp', plugin: 'p', version: '1.0.0' },
+              invocation: '/demo',
+            },
+            {
+              id: 'mcpserver:settings:settings.json:context7',
+              kind: 'mcpserver',
+              name: 'context7',
+              description: 'Fetch current library docs.',
+              whenToUse: null,
+              source: { type: 'settings', file: 'settings.json' },
+              invocation: '@context7',
+            },
+          ],
+          scannedAt: Date.now(),
+          parseWarnings: [],
+        } as T;
+
       default:
         console.warn('[mock] unknown command:', cmd);
         return undefined as T;
