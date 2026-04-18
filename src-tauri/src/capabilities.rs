@@ -157,6 +157,7 @@ fn scan_plugin_skills(
     }
 }
 
+// (false, _) < (true, _): "unknown" always ranks below any real version string.
 fn version_rank(v: &str) -> impl Ord + '_ {
     (v != "unknown", v)
 }
