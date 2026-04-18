@@ -223,6 +223,99 @@ pub(crate) fn remove_hooks_in(home: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HookEntry {
+    pub event: String,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstalledHooks {
+    pub settings_path: String,
+    pub settings_present: bool,
+    pub parse_error: Option<String>,
+    pub entries: Vec<HookEntry>,
+}
+
+pub fn read_installed() -> InstalledHooks {
+    read_installed_in(&default_home())
+}
+
+pub(crate) fn read_installed_in(home: &Path) -> InstalledHooks {
+    let p = settings_path_in(home);
+    let script = hook_script_path_in(home);
+    let script_exists = script.exists();
+    let settings_path = p.display().to_string();
+
+    if !p.exists() {
+        return InstalledHooks {
+            settings_path,
+            settings_present: false,
+            parse_error: None,
+            entries: EVENTS
+                .iter()
+                .map(|(event, _)| HookEntry {
+                    event: (*event).into(),
+                    status: "missing".into(),
+                })
+                .collect(),
+        };
+    }
+
+    let text = match std::fs::read_to_string(&p) {
+        Ok(t) => t,
+        Err(e) => {
+            return InstalledHooks {
+                settings_path,
+                settings_present: true,
+                parse_error: Some(e.to_string()),
+                entries: vec![],
+            };
+        }
+    };
+    let settings: Value = match serde_json::from_str(&text) {
+        Ok(v) => v,
+        Err(e) => {
+            return InstalledHooks {
+                settings_path,
+                settings_present: true,
+                parse_error: Some(e.to_string()),
+                entries: vec![],
+            };
+        }
+    };
+
+    let hooks = settings.get("hooks").and_then(|v| v.as_object());
+    let entries = EVENTS
+        .iter()
+        .map(|(event, _endpoint)| {
+            let arr = hooks.and_then(|h| h.get(*event)).and_then(|v| v.as_array());
+            let clauditor_entry = arr.and_then(|a| {
+                a.iter()
+                    .find(|g| g.get(SENTINEL).and_then(|v| v.as_bool()).unwrap_or(false))
+            });
+            let status = match clauditor_entry {
+                None => "missing",
+                Some(_) if !script_exists => "stale",
+                Some(_) => "present",
+            };
+            HookEntry {
+                event: (*event).into(),
+                status: status.into(),
+            }
+        })
+        .collect();
+
+    InstalledHooks {
+        settings_path,
+        settings_present: true,
+        parse_error: None,
+        entries,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -307,5 +400,71 @@ mod tests {
             serde_json::from_str(&std::fs::read_to_string(settings_path_in(home)).unwrap())
                 .unwrap();
         assert!(v.get("hooks").is_none());
+    }
+
+    #[test]
+    fn read_installed_missing_file_reports_all_missing() {
+        let tmp = TempDir::new().unwrap();
+        let got = read_installed_in(tmp.path());
+        assert!(!got.settings_present);
+        assert_eq!(got.entries.len(), EVENTS.len());
+        assert!(got.entries.iter().all(|e| e.status == "missing"));
+    }
+
+    #[test]
+    fn read_installed_reports_present_when_sentinel_and_script_exist() {
+        let tmp = TempDir::new().unwrap();
+        let home = tmp.path();
+        seed(
+            home,
+            json!({
+                "hooks": {
+                    "PreToolUse": [ { "_clauditor": true, "hooks": [] } ]
+                }
+            }),
+            true,
+        );
+        let got = read_installed_in(home);
+        let pre = got
+            .entries
+            .iter()
+            .find(|e| e.event == "PreToolUse")
+            .unwrap();
+        assert_eq!(pre.status, "present");
+        let stop = got.entries.iter().find(|e| e.event == "Stop").unwrap();
+        assert_eq!(stop.status, "missing");
+    }
+
+    #[test]
+    fn read_installed_reports_stale_when_script_is_gone() {
+        let tmp = TempDir::new().unwrap();
+        let home = tmp.path();
+        seed(
+            home,
+            json!({
+                "hooks": {
+                    "PreToolUse": [ { "_clauditor": true, "hooks": [] } ]
+                }
+            }),
+            false,
+        );
+        let got = read_installed_in(home);
+        let pre = got
+            .entries
+            .iter()
+            .find(|e| e.event == "PreToolUse")
+            .unwrap();
+        assert_eq!(pre.status, "stale");
+    }
+
+    #[test]
+    fn read_installed_surfaces_parse_error() {
+        let tmp = TempDir::new().unwrap();
+        let home = tmp.path();
+        std::fs::create_dir_all(claude_dir_in(home)).unwrap();
+        std::fs::write(settings_path_in(home), b"{ not json").unwrap();
+        let got = read_installed_in(home);
+        assert!(got.parse_error.is_some());
+        assert!(got.entries.is_empty());
     }
 }
