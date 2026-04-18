@@ -20,7 +20,7 @@ export function StatusBar({ onRequestKill }: StatusBarProps) {
   const onKillOrRestart = async () => {
     if (!active) return;
     if (active.state === 'exited') {
-      const { cols, rows } = probeDims(document.body);
+      const { cols, rows } = probeDims();
       await api.restartSession(active.id, cols, rows);
     } else {
       onRequestKill(active.id);

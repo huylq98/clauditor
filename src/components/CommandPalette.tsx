@@ -126,7 +126,7 @@ export function CommandPalette({
                   icon={<RotateCw size={14} />}
                   label="Restart all exited sessions"
                   onSelect={() => run(async () => {
-                    const { cols, rows } = probeDims(document.body);
+                    const { cols, rows } = probeDims();
                     await api.restartAllExited(cols, rows);
                   })}
                 />
