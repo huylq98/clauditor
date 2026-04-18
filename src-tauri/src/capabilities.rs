@@ -58,9 +58,15 @@ struct Frontmatter {
 }
 
 fn split_frontmatter(text: &str) -> Option<(&str, &str)> {
-    let stripped = text.strip_prefix("---\n")?;
-    let end = stripped.find("\n---\n")?;
-    Some((&stripped[..end], &stripped[end + 5..]))
+    let stripped = text
+        .strip_prefix("---\n")
+        .or_else(|| text.strip_prefix("---\r\n"))?;
+    for delim in ["\n---\n", "\n---\r\n", "\r\n---\n", "\r\n---\r\n"] {
+        if let Some(end) = stripped.find(delim) {
+            return Some((&stripped[..end], &stripped[end + delim.len()..]));
+        }
+    }
+    None
 }
 
 fn first_paragraph(body: &str) -> Option<String> {
@@ -77,7 +83,9 @@ fn first_paragraph(body: &str) -> Option<String> {
 }
 
 fn parse_skill_md(path: &std::path::Path) -> Result<(String, String, Option<String>)> {
-    let text = std::fs::read_to_string(path).context("read SKILL.md")?;
+    let text = std::fs::read_to_string(path)
+        .context("read SKILL.md")?
+        .replace("\r\n", "\n");
     let (fm_text, body) = split_frontmatter(&text).context("missing frontmatter")?;
     let fm: Frontmatter = serde_yaml_ng::from_str(fm_text).context("parse frontmatter yaml")?;
     let name = fm
@@ -95,7 +103,9 @@ fn parse_skill_md(path: &std::path::Path) -> Result<(String, String, Option<Stri
 }
 
 fn parse_md_with_frontmatter(path: &std::path::Path) -> Result<(String, String, Option<String>)> {
-    let text = std::fs::read_to_string(path).context("read file")?;
+    let text = std::fs::read_to_string(path)
+        .context("read file")?
+        .replace("\r\n", "\n");
     let (fm_text, body) = split_frontmatter(&text).context("missing frontmatter")?;
     let fm: Frontmatter = serde_yaml_ng::from_str(fm_text).context("parse frontmatter yaml")?;
     let name = fm
