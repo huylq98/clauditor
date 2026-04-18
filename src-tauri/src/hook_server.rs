@@ -72,15 +72,11 @@ async fn handle(
     let payload = body.map(|Json(v)| v).unwrap_or(Value::Null);
     let ppid = payload
         .get("clauditor_ppid")
-        .and_then(|v| v.as_u64())
-        .map(|v| v as u32)
+        .and_then(Value::as_u64)
+        .and_then(|v| u32::try_from(v).ok())
         .unwrap_or(0);
 
-    let sid = if ppid > 0 {
-        state.pty.find_by_pid(ppid)
-    } else {
-        None
-    };
+    let sid = (ppid > 0).then(|| state.pty.find_by_pid(ppid)).flatten();
 
     if let Some(sid) = sid {
         let hook = match event.as_str() {

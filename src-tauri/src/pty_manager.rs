@@ -334,11 +334,16 @@ impl PtyManager {
     }
 
     pub fn kill_all(&self) -> u32 {
-        let ids: Vec<SessionId> = self.sessions.lock().keys().copied().collect();
+        // Take the lock once: collect live IDs and drop the master/writer
+        // for each in the same critical section. Previous implementation
+        // re-locked once per iteration via is_running() + kill().
+        let mut sessions = self.sessions.lock();
         let mut n = 0u32;
-        for id in ids {
-            if self.is_running(id) {
-                self.kill(id);
+        for s in sessions.values_mut() {
+            if s.master.is_some() {
+                s.master.take();
+                s.writer.take();
+                s.pid = None;
                 n += 1;
             }
         }
