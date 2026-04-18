@@ -224,6 +224,7 @@ export default function App() {
           onNewSession={newSession}
           onReopenCwd={reopenCwd}
           onShowShortcuts={() => setShortcutsOpen(true)}
+          onShowSettings={() => setSettingsOpen(true)}
         />
         <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
         <AlertDialog
