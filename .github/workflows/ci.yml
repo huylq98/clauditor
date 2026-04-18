@@ -9,6 +9,8 @@ permissions:
   contents: read
 
 env:
+  # Opt into Node.js 24 runtime for all JavaScript actions ahead of
+  # GitHub's June-2026 default flip. Removes deprecation warnings.
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 concurrency:
