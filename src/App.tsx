@@ -45,6 +45,7 @@ export default function App() {
 
   const [killTarget, setKillTarget] = useState<KillTarget>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [, setSettingsOpen] = useState(false);
 
   const spawnForCwd = useCallback(
     async (cwd: string | null) => {
@@ -168,7 +169,12 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useKeyboardShortcuts({ onNewSession: newSession, onCloseActive: closeActive });
+  useKeyboardShortcuts({
+    onNewSession: newSession,
+    onCloseActive: closeActive,
+    onShowShortcuts: () => setShortcutsOpen(true),
+    onShowSettings: () => setSettingsOpen(true),
+  });
 
   useEffect(() => {
     void checkUpdate();
