@@ -24,6 +24,8 @@ export function HooksTab() {
     }
   }, []);
 
+  // On-mount data fetch: intentionally sets state once the promise resolves.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void reload(); }, [reload]);
 
   const reinstall = async () => {
