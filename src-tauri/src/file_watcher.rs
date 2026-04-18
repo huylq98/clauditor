@@ -153,17 +153,12 @@ impl FileWatcher {
                 mtime,
             });
         }
+        // Dirs before files, then alphabetical within each group.
         out.sort_by(|a, b| {
-            let ad = matches!(a.kind, EntryKind::Dir);
-            let bd = matches!(b.kind, EntryKind::Dir);
-            if ad != bd {
-                return if ad {
-                    std::cmp::Ordering::Less
-                } else {
-                    std::cmp::Ordering::Greater
-                };
-            }
-            a.path.cmp(&b.path)
+            let dir_key = |k: &EntryKind| !matches!(k, EntryKind::Dir);
+            dir_key(&a.kind)
+                .cmp(&dir_key(&b.kind))
+                .then_with(|| a.path.cmp(&b.path))
         });
         out
     }

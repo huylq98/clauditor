@@ -11,16 +11,24 @@ const LABEL: Record<SessionState, string> = {
   exited: 'exited',
 };
 
+// Each state combines color (primary signal) with a non-color property so
+// users with color-vision deficiencies still have a distinguishing cue:
+//   starting / running → solid fill
+//   idle               → hollow (border-only)
+//   working            → pulse + glow
+//   awaiting_user      → pulse + glow + white ring
+//   awaiting_permission→ pulse + glow + inset white ring
+//   exited             → hollow + dimmed
 const DOT_CLASS: Record<SessionState, string> = {
   starting: 'bg-[var(--color-state-running)]',
   running: 'bg-[var(--color-state-running)]',
-  idle: 'bg-[var(--color-state-idle)]',
+  idle: 'border border-[var(--color-state-idle)] bg-transparent',
   working: 'bg-[var(--color-state-working)] animate-pulse shadow-[0_0_8px_var(--color-state-working)]',
   awaiting_user:
-    'bg-[var(--color-state-awaiting-user)] animate-pulse shadow-[0_0_10px_var(--color-state-awaiting-user)]',
+    'bg-[var(--color-state-awaiting-user)] ring-1 ring-white/80 animate-pulse shadow-[0_0_10px_var(--color-state-awaiting-user)]',
   awaiting_permission:
-    'bg-[var(--color-state-awaiting-permission)] animate-pulse shadow-[0_0_10px_var(--color-state-awaiting-permission)]',
-  exited: 'bg-[var(--color-state-exited)]',
+    'bg-[var(--color-state-awaiting-permission)] ring-1 ring-white/80 ring-inset animate-pulse shadow-[0_0_10px_var(--color-state-awaiting-permission)]',
+  exited: 'border border-[var(--color-state-exited)] bg-transparent opacity-60',
 };
 
 /** Attention states get a larger dot so they're unmissable in peripheral vision. */
@@ -58,6 +66,9 @@ export function StateBadge({ state, showLabel = true, className }: StateBadgePro
 export function StateDot({ state, className }: { state: SessionState; className?: string }) {
   return (
     <span
+      role="img"
+      aria-label={LABEL[state]}
+      title={LABEL[state]}
       className={cn(
         'inline-block rounded-full transition-all',
         SIZE_CLASS[state],

@@ -38,6 +38,7 @@ export function EmptyState({ onNewSession }: EmptyStateProps) {
         className={cn(
           'rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-black',
           'transition-colors hover:bg-[var(--color-accent-hover)]',
+          'outline-none ring-2 ring-transparent focus-visible:ring-[var(--color-accent)]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]',
         )}
       >
         New session

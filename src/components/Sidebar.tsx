@@ -165,8 +165,12 @@ function ResizeHandle({ width, setWidth }: { width: number; setWidth: (px: numbe
         'absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize',
         'transition-colors hover:bg-[var(--color-accent)]/20',
       )}
-      aria-label="Resize sidebar"
+      aria-label="Resize sidebar — drag, or Ctrl+Shift+←/→"
       role="separator"
+      aria-orientation="vertical"
+      aria-valuenow={width}
+      aria-valuemin={200}
+      aria-valuemax={520}
     />
   );
 }

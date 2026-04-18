@@ -25,6 +25,12 @@ struct Entry {
     stop_task: Option<JoinHandle<()>>,
 }
 
+#[derive(Default)]
+struct ActivityOutcome {
+    became_running: bool,
+    should_arm_idle: bool,
+}
+
 impl Entry {
     fn new(state: SessionState) -> Self {
         Self {
@@ -110,28 +116,30 @@ impl StateEngine {
     }
 
     pub fn note_activity(&self, id: SessionId) {
-        let transition_to_running = {
+        let outcome = {
             let mut map = self.inner.lock();
-            match map.get_mut(&id) {
-                Some(e) => {
-                    let should = matches!(
+            map.get_mut(&id)
+                .map(|e| {
+                    let became_running = matches!(
                         e.state,
                         SessionState::Idle
                             | SessionState::AwaitingUser
                             | SessionState::AwaitingPermission
                     );
-                    if should {
+                    if became_running {
                         e.state = SessionState::Running;
                     }
-                    (should, e.state != SessionState::Exited)
-                }
-                None => (false, false),
-            }
+                    ActivityOutcome {
+                        became_running,
+                        should_arm_idle: e.state != SessionState::Exited,
+                    }
+                })
+                .unwrap_or_default()
         };
-        if transition_to_running.0 {
+        if outcome.became_running {
             self.emit(id, SessionState::Running);
         }
-        if transition_to_running.1 {
+        if outcome.should_arm_idle {
             self.arm_idle(id);
         }
     }

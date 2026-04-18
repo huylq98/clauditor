@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -23,7 +23,12 @@ struct Session {
     pid: Option<u32>,
     master: Option<Box<dyn MasterPty + Send>>,
     writer: Option<Box<dyn Write + Send>>,
-    buffer: Vec<u8>,
+    // Ring buffer for PTY output. `VecDeque` gives O(1) amortized push_back
+    // and O(1) pop_front, so draining overflow doesn't pay the O(n) shift
+    // that `Vec::drain(..)` does. `get_buffer` iterates to produce a
+    // contiguous `String`; that's O(n) but only fires when the frontend
+    // asks to rehydrate scrollback (tab switch / reload).
+    buffer: VecDeque<u8>,
 }
 
 impl Session {
@@ -39,7 +44,7 @@ impl Session {
     }
 
     fn push_buffer(&mut self, chunk: &[u8]) {
-        self.buffer.extend_from_slice(chunk);
+        self.buffer.extend(chunk.iter().copied());
         if self.buffer.len() > MAX_BUFFER {
             let overflow = self.buffer.len() - MAX_BUFFER;
             self.buffer.drain(..overflow);
@@ -53,9 +58,27 @@ pub enum PtyEvent {
     Exit(SessionId, Option<i32>),
 }
 
+/// Internal projection of a `Session` — everything stable that a caller
+/// might want without locking the session map. `SessionDesc` includes
+/// the state enum from the state engine and is the public (serializable)
+/// shape; this one is the pty-local view.
+pub struct SessionSnapshot {
+    pub id: SessionId,
+    pub name: String,
+    pub cwd: String,
+    pub created_at: i64,
+    pub pid: Option<u32>,
+}
+
 #[derive(Clone)]
 pub struct PtyManager {
     sessions: Arc<Mutex<HashMap<SessionId, Session>>>,
+    // Parallel index for O(1) `find_by_pid`. The hook server hits this
+    // on every Claude Code tool call; a linear scan of sessions scales
+    // poorly once users accumulate many backgrounded sessions. The
+    // invariant is: for every Session with `pid: Some(n)`, this map
+    // has `n -> sid`. Sessions without a live pid have no entry here.
+    pid_index: Arc<Mutex<HashMap<u32, SessionId>>>,
     app: AppHandle,
     tx: mpsc::UnboundedSender<PtyEvent>,
     token: String,
@@ -67,6 +90,7 @@ impl PtyManager {
         (
             Self {
                 sessions: Arc::new(Mutex::new(HashMap::new())),
+                pid_index: Arc::new(Mutex::new(HashMap::new())),
                 app,
                 tx,
                 token,
@@ -75,11 +99,17 @@ impl PtyManager {
         )
     }
 
-    pub fn list(&self) -> Vec<(SessionId, String, String, i64, Option<u32>)> {
+    pub fn list(&self) -> Vec<SessionSnapshot> {
         self.sessions
             .lock()
             .values()
-            .map(|s| (s.id, s.name.clone(), s.cwd.clone(), s.created_at, s.pid))
+            .map(|s| SessionSnapshot {
+                id: s.id,
+                name: s.name.clone(),
+                cwd: s.cwd.clone(),
+                created_at: s.created_at,
+                pid: s.pid,
+            })
             .collect()
     }
 
@@ -92,18 +122,20 @@ impl PtyManager {
     }
 
     pub fn find_by_pid(&self, pid: u32) -> Option<SessionId> {
-        self.sessions
-            .lock()
-            .values()
-            .find(|s| s.pid == Some(pid))
-            .map(|s| s.id)
+        self.pid_index.lock().get(&pid).copied()
     }
 
     pub fn get_buffer(&self, id: SessionId) -> String {
-        match self.sessions.lock().get(&id) {
-            Some(s) => String::from_utf8_lossy(&s.buffer).into_owned(),
-            None => String::new(),
-        }
+        let mut sessions = self.sessions.lock();
+        let Some(s) = sessions.get_mut(&id) else {
+            return String::new();
+        };
+        // `make_contiguous` folds the two internal slices of the VecDeque
+        // into one so we can hand an `&[u8]` to `from_utf8_lossy`. It does
+        // an in-place rotation, so subsequent reads are zero-cost until the
+        // ring wraps again.
+        let slice = s.buffer.make_contiguous();
+        String::from_utf8_lossy(slice).into_owned()
     }
 
     pub fn write(&self, id: SessionId, data: &str) {
@@ -146,7 +178,9 @@ impl PtyManager {
             // Dropping the master drops the child handle too.
             s.master.take();
             s.writer.take();
-            s.pid = None;
+            if let Some(pid) = s.pid.take() {
+                self.pid_index.lock().remove(&pid);
+            }
         }
     }
 
@@ -176,7 +210,7 @@ impl PtyManager {
             pid: None,
             master: None,
             writer: None,
-            buffer: buffer.as_bytes().to_vec(),
+            buffer: VecDeque::from_iter(buffer.bytes()),
         };
         self.sessions.lock().insert(desc.id, s);
     }
@@ -188,7 +222,7 @@ impl PtyManager {
             .map(|s| {
                 (
                     s.describe(SessionState::Running),
-                    String::from_utf8_lossy(&s.buffer).into_owned(),
+                    String::from_utf8_lossy(&Vec::from_iter(s.buffer.iter().copied())).into_owned(),
                 )
             })
             .collect()
@@ -272,9 +306,14 @@ impl PtyManager {
             pid,
             master: Some(pair.master),
             writer: Some(writer),
-            buffer: Vec::new(),
+            // Pre-allocate MAX_BUFFER so sustained output doesn't trigger
+            // the ring's geometric reallocation cycle.
+            buffer: VecDeque::with_capacity(MAX_BUFFER),
         };
         self.sessions.lock().insert(id, session);
+        if let Some(pid) = pid {
+            self.pid_index.lock().insert(pid, id);
+        }
 
         let desc = SessionDesc {
             id,
@@ -290,6 +329,7 @@ impl PtyManager {
         let app = self.app.clone();
         let tx = self.tx.clone();
         let sessions = self.sessions.clone();
+        let pid_index = self.pid_index.clone();
         std::thread::spawn(move || {
             let mut buf = [0u8; 8192];
             loop {
@@ -323,7 +363,9 @@ impl PtyManager {
                 if let Some(s) = sessions.get_mut(&id) {
                     s.master.take();
                     s.writer.take();
-                    s.pid = None;
+                    if let Some(pid) = s.pid.take() {
+                        pid_index.lock().remove(&pid);
+                    }
                 }
             }
             let _ = app.emit("session:exit", SessionExitEvent { id, code });
@@ -334,11 +376,19 @@ impl PtyManager {
     }
 
     pub fn kill_all(&self) -> u32 {
-        let ids: Vec<SessionId> = self.sessions.lock().keys().copied().collect();
+        // Take the lock once: collect live IDs and drop the master/writer
+        // for each in the same critical section. Previous implementation
+        // re-locked once per iteration via is_running() + kill().
+        let mut sessions = self.sessions.lock();
+        let mut pid_index = self.pid_index.lock();
         let mut n = 0u32;
-        for id in ids {
-            if self.is_running(id) {
-                self.kill(id);
+        for s in sessions.values_mut() {
+            if s.master.is_some() {
+                s.master.take();
+                s.writer.take();
+                if let Some(pid) = s.pid.take() {
+                    pid_index.remove(&pid);
+                }
                 n += 1;
             }
         }

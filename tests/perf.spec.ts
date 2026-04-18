@@ -237,7 +237,6 @@ test.describe('Perf — app latency budgets', () => {
     const md = renderReport(rows);
     await fs.promises.writeFile(path.join(ART, 'report.json'), JSON.stringify(rows, null, 2));
     await fs.promises.writeFile(path.join(ART, 'report.md'), md);
-    // eslint-disable-next-line no-console
     console.log('\n' + md);
   });
 });

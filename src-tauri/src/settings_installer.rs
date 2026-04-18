@@ -66,17 +66,30 @@ exit 0
 
 fn write_hook_script() -> Result<PathBuf> {
     std::fs::create_dir_all(claude_dir())?;
-    let path = hook_script_path();
+    let final_path = hook_script_path();
+    // Write to a sibling .tmp first, chmod it, then atomically rename.
+    // A crash between write and chmod would otherwise leave a
+    // mode-0o644 (umask-default) script containing the token.
+    let tmp_path = final_path.with_extension(
+        final_path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| format!("{e}.tmp"))
+            .unwrap_or_else(|| "tmp".into()),
+    );
     let content = if cfg!(windows) { PS1 } else { SH };
-    std::fs::write(&path, content)?;
+    std::fs::write(&tmp_path, content)?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        let mut perms = std::fs::metadata(&path)?.permissions();
+        let mut perms = std::fs::metadata(&tmp_path)?.permissions();
         perms.set_mode(0o700);
-        std::fs::set_permissions(&path, perms).ok();
+        std::fs::set_permissions(&tmp_path, perms)?;
     }
-    Ok(path)
+    std::fs::rename(&tmp_path, &final_path).inspect_err(|_| {
+        let _ = std::fs::remove_file(&tmp_path);
+    })?;
+    Ok(final_path)
 }
 
 fn build_command(endpoint: &str) -> String {
@@ -95,7 +108,9 @@ fn build_command(endpoint: &str) -> String {
 pub fn install() -> Result<PathBuf> {
     write_hook_script()?;
     let p = settings_path();
-    std::fs::create_dir_all(p.parent().unwrap())?;
+    if let Some(parent) = p.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
     let mut settings: Value = if p.exists() {
         std::fs::read_to_string(&p)
             .ok()
@@ -105,16 +120,24 @@ pub fn install() -> Result<PathBuf> {
         json!({})
     };
 
-    let hooks = settings
-        .as_object_mut()
-        .unwrap()
-        .entry("hooks".to_string())
-        .or_insert_with(|| json!({}));
-    let hooks = hooks.as_object_mut().unwrap();
+    // If the existing file's top-level isn't an object or `hooks` isn't an
+    // object, the user has hand-edited it into a shape we don't recognize.
+    // Rather than overwriting their data or panicking, bail out and leave
+    // their file untouched — the hook script is still on disk, the user
+    // just won't get hooks wired up until they fix their settings.json.
+    let Some(root) = settings.as_object_mut() else {
+        anyhow::bail!("settings.json root is not an object — refusing to overwrite");
+    };
+    let hooks_val = root.entry("hooks".to_string()).or_insert_with(|| json!({}));
+    let Some(hooks) = hooks_val.as_object_mut() else {
+        anyhow::bail!("settings.json `hooks` is not an object — refusing to overwrite");
+    };
 
     for (event, endpoint) in EVENTS {
         let existing = hooks.entry(event.to_string()).or_insert_with(|| json!([]));
-        let arr = existing.as_array_mut().unwrap();
+        let Some(arr) = existing.as_array_mut() else {
+            anyhow::bail!("settings.json hooks.{event} is not an array — refusing to overwrite");
+        };
         arr.retain(|g| !g.get(SENTINEL).and_then(|v| v.as_bool()).unwrap_or(false));
         arr.push(json!({
             SENTINEL: true,
@@ -122,7 +145,13 @@ pub fn install() -> Result<PathBuf> {
         }));
     }
 
-    std::fs::write(&p, serde_json::to_string_pretty(&settings)?)?;
+    // Atomic write via tmp+rename so a crash mid-write doesn't leave the
+    // user with a truncated settings.json.
+    let tmp = p.with_extension("json.tmp");
+    std::fs::write(&tmp, serde_json::to_string_pretty(&settings)?)?;
+    std::fs::rename(&tmp, &p).inspect_err(|_| {
+        let _ = std::fs::remove_file(&tmp);
+    })?;
     Ok(p)
 }
 

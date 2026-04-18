@@ -1,40 +1,28 @@
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_dialog::DialogExt;
 
 use crate::app_state::AppState;
 use crate::types::{
     ActivitySnapshot, CreateSessionArgs, FilePreview, ForgetSummary, KillSummary, RestartSummary,
-    SessionDesc, SessionFocusEvent, SessionForgottenEvent, SessionId, SessionState, TreeEntry,
+    SessionDesc, SessionForgottenEvent, SessionId, SessionState, TreeEntry,
 };
-
-fn ok<T>(v: T) -> Result<T, String> {
-    Ok(v)
-}
-
-fn fail<E: std::fmt::Display>(e: E) -> String {
-    e.to_string()
-}
 
 #[tauri::command]
 pub async fn sessions_list(state: State<'_, AppState>) -> Result<Vec<SessionDesc>, String> {
-    let pty = state.pty.clone();
     let engine = state.engine.clone();
-    let list = pty
+    Ok(state
+        .pty
         .list()
         .into_iter()
-        .map(|(id, name, cwd, created_at, pid)| {
-            let session_state = engine.get(id).unwrap_or(SessionState::Exited);
-            SessionDesc {
-                id,
-                name,
-                cwd,
-                created_at,
-                pid,
-                state: session_state,
-            }
+        .map(|s| SessionDesc {
+            id: s.id,
+            name: s.name,
+            cwd: s.cwd,
+            created_at: s.created_at,
+            pid: s.pid,
+            state: engine.get(s.id).unwrap_or(SessionState::Exited),
         })
-        .collect();
-    ok(list)
+        .collect())
 }
 
 #[tauri::command]
@@ -67,8 +55,8 @@ pub async fn sessions_create(
         move || pty.spawn(args)
     })
     .await
-    .map_err(fail)?
-    .map_err(fail)?;
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())?;
 
     state.engine.register(desc.id);
     state.activity.register(desc.id);
@@ -79,13 +67,13 @@ pub async fn sessions_create(
     }
     let _ = app.emit("session:created", &desc);
     state.store.mark_dirty();
-    ok(Some(desc))
+    Ok(Some(desc))
 }
 
 #[tauri::command]
 pub async fn sessions_kill(state: State<'_, AppState>, id: SessionId) -> Result<bool, String> {
     state.pty.kill(id);
-    ok(true)
+    Ok(true)
 }
 
 #[tauri::command]
@@ -100,12 +88,12 @@ pub async fn sessions_restart(
         move || pty.restart(id, cols, rows)
     })
     .await
-    .map_err(fail)?
+    .map_err(|e| e.to_string())?
     .ok();
     if let Some(d) = desc.clone() {
         state.engine.register(d.id);
     }
-    ok(desc)
+    Ok(desc)
 }
 
 #[tauri::command]
@@ -120,7 +108,7 @@ pub async fn sessions_forget(
     state.engine.unregister(id);
     let _ = app.emit("session:forgotten", SessionForgottenEvent { id });
     state.store.mark_dirty();
-    ok(true)
+    Ok(true)
 }
 
 #[tauri::command]
@@ -137,7 +125,7 @@ pub async fn sessions_rename(
     desc.state = state.engine.get(id).unwrap_or(SessionState::Exited);
     let _ = app.emit("session:renamed", &desc);
     state.store.mark_dirty();
-    ok(desc)
+    Ok(desc)
 }
 
 #[tauri::command]
@@ -164,13 +152,14 @@ pub async fn sessions_resize(
 
 #[tauri::command]
 pub async fn sessions_buffer(state: State<'_, AppState>, id: SessionId) -> Result<String, String> {
-    ok(state.pty.get_buffer(id))
+    Ok(state.pty.get_buffer(id))
 }
 
 #[tauri::command]
 pub async fn sessions_kill_all(state: State<'_, AppState>) -> Result<KillSummary, String> {
-    let killed = state.pty.kill_all();
-    ok(KillSummary { killed })
+    Ok(KillSummary {
+        killed: state.pty.kill_all(),
+    })
 }
 
 #[tauri::command]
@@ -195,7 +184,7 @@ pub async fn sessions_restart_all_exited(
             restarted += 1;
         }
     }
-    ok(RestartSummary { restarted })
+    Ok(RestartSummary { restarted })
 }
 
 #[tauri::command]
@@ -219,7 +208,7 @@ pub async fn sessions_forget_all_exited(
         forgotten += 1;
     }
     state.store.mark_dirty();
-    ok(ForgetSummary { forgotten })
+    Ok(ForgetSummary { forgotten })
 }
 
 #[tauri::command]
@@ -228,7 +217,7 @@ pub async fn tree_list(
     sid: SessionId,
     rel: String,
 ) -> Result<Vec<TreeEntry>, String> {
-    ok(state.watcher.list(sid, &rel))
+    Ok(state.watcher.list(sid, &rel))
 }
 
 #[tauri::command]
@@ -237,7 +226,7 @@ pub async fn file_read(
     sid: SessionId,
     rel: String,
 ) -> Result<Option<FilePreview>, String> {
-    ok(state.watcher.read_file(sid, &rel))
+    Ok(state.watcher.read_file(sid, &rel))
 }
 
 #[tauri::command]
@@ -245,7 +234,7 @@ pub async fn activity_snapshot(
     state: State<'_, AppState>,
     sid: SessionId,
 ) -> Result<ActivitySnapshot, String> {
-    ok(state.activity.snapshot(sid))
+    Ok(state.activity.snapshot(sid))
 }
 
 #[tauri::command]
@@ -257,17 +246,6 @@ pub async fn dialog_pick_directory(app: AppHandle) -> Result<Option<String>, Str
         .pick_folder(move |p| {
             let _ = tx.send(p);
         });
-    let result = rx.await.map_err(fail)?;
-    ok(result.map(|p| p.to_string()))
-}
-
-#[allow(dead_code)]
-fn focus_event(id: SessionId) -> SessionFocusEvent {
-    SessionFocusEvent { id }
-}
-
-// Force a dependency on Manager so rustc keeps the import; it's used via `State` extractors.
-#[allow(dead_code)]
-fn _dep_probe<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
-    let _ = app.get_webview_window("main");
+    let path = rx.await.map_err(|e| e.to_string())?;
+    Ok(path.map(|p| p.to_string()))
 }

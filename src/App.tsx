@@ -95,9 +95,20 @@ export default function App() {
 
   const confirmKill = useCallback(async () => {
     if (!killTarget) return;
+    const snapshot = useSessions.getState().byId[killTarget.id];
     await api.killSession(killTarget.id);
     setKillTarget(null);
-  }, [killTarget]);
+    if (snapshot?.cwd) {
+      toast(`Killed "${snapshot.name}"`, {
+        description: snapshot.cwd,
+        duration: 5000,
+        action: {
+          label: 'Restart',
+          onClick: () => void spawnForCwd(snapshot.cwd),
+        },
+      });
+    }
+  }, [killTarget, spawnForCwd]);
 
   useEffect(() => {
     let cancelled = false;

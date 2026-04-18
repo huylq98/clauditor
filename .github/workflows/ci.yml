@@ -116,6 +116,9 @@ jobs:
       - name: Smoke tests
         run: pnpm run test:smoke
 
+      - name: Accessibility tests (axe + target-size)
+        run: pnpm run test:a11y
+
       - name: UI review (screenshot capture)
         run: pnpm run test:ui-review
 
