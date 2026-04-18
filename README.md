@@ -75,6 +75,18 @@ pnpm tauri dev
 - On Linux: `webkit2gtk-4.1`, `libayatana-appindicator3-dev`, `librsvg2-dev`
 - The [`claude` CLI](https://docs.claude.com/en/docs/claude-code/setup) on your `PATH`
 
+## Uninstalling
+
+Clauditor's installers clean up their own hooks so you don't leave stale entries in `~/.claude/settings.json` pointing at a missing binary.
+
+| Platform | Command / action | What gets removed |
+|----------|------------------|-------------------|
+| Windows (NSIS `.exe`) | Apps & Features → Clauditor → Uninstall | Binary + hooks. A dialog asks whether to also wipe `%APPDATA%\dev.clauditor.app` (session list, recent folders). Silent uninstalls default to preserve. |
+| Windows (MSI) | Apps & Features → Clauditor → Uninstall | Binary + hooks. App data is preserved by default. To also wipe data, uninstall via an elevated prompt: `msiexec /x "Clauditor_<ver>_x64_en-US.msi" PURGE_DATA=1`. |
+| Debian/Ubuntu (`.deb`) | `sudo apt remove clauditor` | Binary + hooks. App data preserved. |
+|  | `sudo apt purge clauditor` | Binary + hooks + `~/.local/share/dev.clauditor.app`. |
+| macOS | Drag `Clauditor.app` to Trash | Binary only. Hooks cleanup is tracked in a follow-up; until then, hand-edit `~/.claude/settings.json` and remove entries with `"_clauditor": true`. |
+
 ## Keyboard shortcuts
 
 Press `Ctrl/⌘+/` inside the app to open the full cheat sheet.
@@ -173,6 +185,7 @@ idle ◀─(5 min)── (any) ────────▶ running
 - [x] Recent workspaces reopener
 - [x] Terminal scrollback search
 - [x] Undo on forget
+- [x] Full uninstall support across Windows (MSI + NSIS) and Debian (`.deb`)
 - [ ] Light mode (tokens are wired; needs a toggle)
 - [ ] Auto-updater via `tauri-plugin-updater` (signed releases)
 - [ ] Per-session themes / accent colors
