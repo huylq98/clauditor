@@ -16,6 +16,7 @@ mod types;
 
 use std::path::PathBuf;
 
+use rand::rngs::OsRng;
 use rand::RngCore;
 use tauri::Manager;
 
@@ -28,7 +29,7 @@ use crate::state_engine::StateEngine;
 
 fn generate_token() -> String {
     let mut bytes = [0u8; 24];
-    rand::thread_rng().fill_bytes(&mut bytes);
+    OsRng.fill_bytes(&mut bytes);
     hex::encode(bytes)
 }
 
@@ -55,7 +56,9 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
             let token = generate_token();
-            std::env::set_var("CLAUDITOR_TOKEN", &token);
+            // Do NOT set CLAUDITOR_TOKEN on the parent process — it would leak
+            // to every descendant of Clauditor (not just the claude CLI we spawn).
+            // The token is passed per-PTY via cmd.env in pty_manager.
 
             let (pty, mut pty_rx) = PtyManager::new(handle.clone(), token.clone());
             let engine = StateEngine::new(handle.clone());

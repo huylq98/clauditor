@@ -43,6 +43,7 @@ dirs = "5"
 bytes = "1"
 futures = "0.3"
 hex = "0.4"
+subtle = "2"
 
 [features]
 # Custom protocol required on mobile

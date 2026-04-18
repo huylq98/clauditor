@@ -73,7 +73,7 @@ fn write_hook_script() -> Result<PathBuf> {
     {
         use std::os::unix::fs::PermissionsExt;
         let mut perms = std::fs::metadata(&path)?.permissions();
-        perms.set_mode(0o755);
+        perms.set_mode(0o700);
         std::fs::set_permissions(&path, perms).ok();
     }
     Ok(path)
@@ -82,10 +82,13 @@ fn write_hook_script() -> Result<PathBuf> {
 fn build_command(endpoint: &str) -> String {
     let script = hook_script_path();
     let script = script.display();
+    // endpoint values are sourced from the hardcoded EVENTS table — but quote
+    // them anyway so a future event name containing spaces or shell metachars
+    // can never be interpreted as separate args or command substitution.
     if cfg!(windows) {
-        format!("powershell -NoProfile -ExecutionPolicy Bypass -File \"{script}\" {endpoint}")
+        format!("powershell -NoProfile -ExecutionPolicy Bypass -File \"{script}\" \"{endpoint}\"")
     } else {
-        format!("sh \"{script}\" {endpoint}")
+        format!("sh \"{script}\" \"{endpoint}\"")
     }
 }
 
