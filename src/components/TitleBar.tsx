@@ -13,7 +13,7 @@ export function TitleBar() {
     const w = await getWindow();
     if (!w) return;
     if (action === 'min') await w.minimize();
-    else if (action === 'max') await (await w.isMaximized()) ? w.unmaximize() : w.maximize();
+    else if (action === 'max') await ((await w.isMaximized()) ? w.unmaximize() : w.maximize());
     else await w.close();
   };
 

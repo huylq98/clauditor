@@ -177,7 +177,7 @@ const Tab = memo(function Tab({
           onClose(s.id);
         }}
         className={cn(
-          'flex h-5 w-5 shrink-0 items-center justify-center rounded',
+          'flex h-6 w-6 shrink-0 items-center justify-center rounded',
           'opacity-0 transition-opacity hover:bg-white/10 group-hover:opacity-100',
           isActive && 'opacity-100',
         )}
