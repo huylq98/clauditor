@@ -311,6 +311,96 @@ fn dedup_by_greatest_version(items: &mut Vec<Capability>) {
     }
 }
 
+fn scan_plugin_commands(
+    claude_dir: &std::path::Path,
+    out: &mut Vec<Capability>,
+    warnings: &mut Vec<String>,
+) {
+    let cache = claude_dir.join("plugins").join("cache");
+    let Ok(marketplaces) = std::fs::read_dir(&cache) else {
+        return;
+    };
+    for mp in marketplaces.flatten() {
+        let mp_name = mp.file_name().to_string_lossy().into_owned();
+        let Ok(plugins) = std::fs::read_dir(mp.path()) else {
+            continue;
+        };
+        for plugin in plugins.flatten() {
+            let plugin_name = plugin.file_name().to_string_lossy().into_owned();
+            let Ok(versions) = std::fs::read_dir(plugin.path()) else {
+                continue;
+            };
+            for version in versions.flatten() {
+                let version_name = version.file_name().to_string_lossy().into_owned();
+                let cmds_dir = version.path().join("commands");
+                let Ok(cmd_files) = std::fs::read_dir(&cmds_dir) else {
+                    continue;
+                };
+                for cmd_file in cmd_files.flatten() {
+                    let path = cmd_file.path();
+                    if path.extension().and_then(|e| e.to_str()) != Some("md") {
+                        continue;
+                    }
+                    match parse_md_with_frontmatter(&path) {
+                        Ok((name, description, when_to_use)) => {
+                            out.push(Capability {
+                                id: format!(
+                                    "slashcommand:plugin:{}/{}/{}:{}",
+                                    mp_name, plugin_name, version_name, name
+                                ),
+                                kind: CapabilityKind::SlashCommand,
+                                invocation: format!("/{}", name),
+                                name,
+                                description,
+                                when_to_use,
+                                source: Source::Plugin {
+                                    marketplace: mp_name.clone(),
+                                    plugin: plugin_name.clone(),
+                                    version: version_name.clone(),
+                                },
+                            });
+                        }
+                        Err(e) => {
+                            warnings.push(format!("skipped command at {}: {:#}", path.display(), e))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn scan_user_commands(
+    claude_dir: &std::path::Path,
+    out: &mut Vec<Capability>,
+    warnings: &mut Vec<String>,
+) {
+    let dir = claude_dir.join("commands");
+    let Ok(files) = std::fs::read_dir(&dir) else {
+        return;
+    };
+    for f in files.flatten() {
+        let path = f.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("md") {
+            continue;
+        }
+        match parse_md_with_frontmatter(&path) {
+            Ok((name, description, when_to_use)) => {
+                out.push(Capability {
+                    id: format!("slashcommand:user:{}", name),
+                    kind: CapabilityKind::SlashCommand,
+                    invocation: format!("/{}", name),
+                    name,
+                    description,
+                    when_to_use,
+                    source: Source::User { dir: dir.clone() },
+                });
+            }
+            Err(e) => warnings.push(format!("skipped command at {}: {:#}", path.display(), e)),
+        }
+    }
+}
+
 fn scan_mcp_servers(
     claude_dir: &std::path::Path,
     out: &mut Vec<Capability>,
@@ -363,6 +453,8 @@ pub fn list_capabilities(claude_dir: &std::path::Path) -> CapabilitiesSnapshot {
     scan_plugin_skills(claude_dir, &mut items, &mut parse_warnings);
     scan_plugin_subagents(claude_dir, &mut items, &mut parse_warnings);
     scan_user_subagents(claude_dir, &mut items, &mut parse_warnings);
+    scan_plugin_commands(claude_dir, &mut items, &mut parse_warnings);
+    scan_user_commands(claude_dir, &mut items, &mut parse_warnings);
     scan_mcp_servers(claude_dir, &mut items, &mut parse_warnings);
     dedup_by_greatest_version(&mut items);
     CapabilitiesSnapshot {
@@ -501,6 +593,30 @@ mod tests {
         let fs = mcps.iter().find(|c| c.name == "filesystem").unwrap();
         assert_eq!(fs.description, "Local filesystem access");
         assert_eq!(fs.invocation, "@filesystem");
+    }
+
+    #[test]
+    fn parses_plugin_slash_command() {
+        let snap = list_capabilities(&fixture("slash_plugin"));
+        let cmd = snap
+            .items
+            .iter()
+            .find(|c| c.kind == CapabilityKind::SlashCommand)
+            .unwrap();
+        assert_eq!(cmd.name, "deploy");
+        assert_eq!(cmd.invocation, "/deploy");
+    }
+
+    #[test]
+    fn parses_user_slash_command() {
+        let snap = list_capabilities(&fixture("slash_user"));
+        let cmd = snap
+            .items
+            .iter()
+            .find(|c| c.kind == CapabilityKind::SlashCommand)
+            .unwrap();
+        assert_eq!(cmd.name, "lint");
+        assert!(matches!(&cmd.source, Source::User { .. }));
     }
 
     #[test]
