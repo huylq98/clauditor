@@ -68,11 +68,11 @@ fn first_paragraph(body: &str) -> Option<String> {
         .map(str::trim)
         .find(|p| !p.is_empty())
         .map(|p| {
-            let mut s = p.to_string();
-            if s.len() > 240 {
-                s.truncate(240);
+            if p.chars().count() > 240 {
+                p.chars().take(240).collect()
+            } else {
+                p.to_string()
             }
-            s
         })
 }
 
@@ -204,5 +204,18 @@ mod tests {
             "skill:plugin:marketplace1/plugin1/1.0.0:demo-skill"
         );
         assert!(snap.parse_warnings.is_empty());
+    }
+
+    #[test]
+    fn first_paragraph_truncates_on_char_boundary_for_non_ascii() {
+        // 250 cherry-blossom emoji (each = 4 UTF-8 bytes); without char-boundary
+        // truncation this would panic.
+        let body = "🌸".repeat(250);
+        let result = first_paragraph(&body);
+        assert!(result.is_some());
+        let s = result.unwrap();
+        // Either chars-take-240 (240 emoji = 960 bytes) or byte-boundary safe truncation
+        // is acceptable. Just assert no panic and a non-empty result.
+        assert!(!s.is_empty());
     }
 }
