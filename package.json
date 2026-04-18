@@ -9,7 +9,12 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "playwright test",
+    "test:smoke": "playwright test tests/smoke.spec.ts",
+    "test:ui-review": "playwright test tests/ui-review.spec.ts",
+    "perf": "playwright test tests/perf.spec.ts",
+    "perf:prod": "playwright test --config=playwright.prod.config.ts"
   },
   "dependencies": {
     "@radix-ui/react-context-menu": "^2.2.6",

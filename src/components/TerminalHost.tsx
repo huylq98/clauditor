@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import type { Terminal } from '@xterm/xterm';
 import type { FitAddon } from '@xterm/addon-fit';
 import type { SearchAddon } from '@xterm/addon-search';
@@ -13,6 +13,16 @@ interface TerminalHostProps {
   sessionId: SessionId;
   active: boolean;
 }
+
+/**
+ * Wrapped with React.memo so a `setActive` change only re-renders the two
+ * TerminalHost instances whose `active` prop actually flipped (old + new),
+ * not every mounted terminal. Cuts tab-switch work roughly in half.
+ */
+export const TerminalHost = memo(TerminalHostImpl, (prev, next) => {
+  return prev.sessionId === next.sessionId && prev.active === next.active;
+});
+TerminalHost.displayName = 'TerminalHost';
 
 const SEARCH_OPTS = {
   decorations: {
@@ -30,7 +40,7 @@ const SEARCH_OPTS = {
  * via `active`. Xterm's own buffer/scrollback is preserved when hidden, so
  * there's no rehydration cost on tab switch.
  */
-export function TerminalHost({ sessionId, active }: TerminalHostProps) {
+function TerminalHostImpl({ sessionId, active }: TerminalHostProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
