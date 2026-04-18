@@ -1,0 +1,1 @@
+C:\Users\Admin\IdeaProjects\clauditor\.worktrees\e2e-test-suite\src-tauri\test-fixtures\fake-claude\target\release\fake-claude.exe: C:\Users\Admin\IdeaProjects\clauditor\.worktrees\e2e-test-suite\src-tauri\test-fixtures\fake-claude\src\main.rs
