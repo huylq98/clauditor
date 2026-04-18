@@ -4,9 +4,11 @@ import { platform } from 'node:os';
 const repoRoot = resolve(__dirname, '../..');
 const isWindows = platform() === 'win32';
 
+// `pnpm e2e:build:app` runs `tauri build --debug --no-bundle`, which puts the
+// binary under target/debug/ (not target/release/).
 const tauriBinary = isWindows
-  ? resolve(repoRoot, 'src-tauri/target/release/clauditor.exe')
-  : resolve(repoRoot, 'src-tauri/target/release/clauditor');
+  ? resolve(repoRoot, 'src-tauri/target/debug/clauditor.exe')
+  : resolve(repoRoot, 'src-tauri/target/debug/clauditor');
 
 const fakeClaude = isWindows
   ? resolve(repoRoot, 'src-tauri/test-fixtures/fake-claude/target/release/fake-claude.exe')
