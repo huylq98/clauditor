@@ -1,0 +1,4 @@
+[
+  {"kind":"stdout","at_ms":0,"text":"Claude Code v2.1.113-fake\n"},
+  {"kind":"exit","at_ms":300,"code":1}
+]
