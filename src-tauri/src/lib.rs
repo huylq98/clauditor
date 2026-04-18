@@ -4,6 +4,7 @@
 
 mod activity_service;
 mod app_state;
+mod capabilities;
 mod cleanup;
 mod commands;
 mod file_watcher;
