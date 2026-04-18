@@ -249,3 +249,30 @@ pub async fn dialog_pick_directory(app: AppHandle) -> Result<Option<String>, Str
     let path = rx.await.map_err(|e| e.to_string())?;
     Ok(path.map(|p| p.to_string()))
 }
+
+#[tauri::command]
+pub fn get_preferences(
+    state: tauri::State<crate::app_state::AppState>,
+) -> crate::preferences_store::Preferences {
+    state.prefs.get()
+}
+
+#[tauri::command]
+pub fn set_preferences(
+    preferences: crate::preferences_store::Preferences,
+    state: tauri::State<crate::app_state::AppState>,
+) -> Result<(), String> {
+    state.prefs.set(preferences).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn read_installed_hooks() -> crate::settings_installer::InstalledHooks {
+    crate::settings_installer::read_installed()
+}
+
+#[tauri::command]
+pub fn reinstall_hooks() -> Result<(), String> {
+    crate::settings_installer::install()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}

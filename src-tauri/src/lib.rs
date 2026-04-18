@@ -71,6 +71,7 @@ pub fn run() {
             let watcher = FileWatcher::new(handle.clone());
             let activity = ActivityService::new(handle.clone());
             let store = SessionStore::new(user_data_dir(&handle));
+            let prefs = crate::preferences_store::PreferencesStore::new(user_data_dir(&handle));
 
             // Wire the snapshot closure (records all sessions at flush time).
             {
@@ -106,6 +107,7 @@ pub fn run() {
                 activity: activity.clone(),
                 store: store.clone(),
                 token: token.clone(),
+                prefs,
             };
             app.manage(state);
 
@@ -174,6 +176,10 @@ pub fn run() {
             commands::file_read,
             commands::activity_snapshot,
             commands::dialog_pick_directory,
+            commands::get_preferences,
+            commands::set_preferences,
+            commands::read_installed_hooks,
+            commands::reinstall_hooks,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
