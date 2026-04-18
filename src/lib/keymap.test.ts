@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  Chord,
   parseChord,
   formatChord,
   matchesChord,
@@ -96,6 +95,3 @@ describe('DEFAULT_KEYMAP + ACTION_CATALOG', () => {
     }
   });
 });
-
-// Suppress unused import warning — Chord is used as a type in the test file
-type _ChordUsed = Chord;
