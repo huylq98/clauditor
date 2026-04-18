@@ -42,6 +42,9 @@
     "windows": {
       "nsis": {
         "installerHooks": "installer/windows/nsis/uninstall-hooks.nsh"
+      },
+      "wix": {
+        "fragmentPaths": ["installer/windows/wix/cleanup-fragment.wxs"]
       }
     }
   }
