@@ -8,12 +8,12 @@
   MessageBox MB_YESNO|MB_ICONQUESTION \
     "Also remove your Clauditor settings and session history?$\r$\n$\r$\nThis clears the recent-folder list and saved session metadata under %APPDATA%\dev.clauditor.app." \
     /SD IDNO \
-    IDYES clauditor_purge \
-    IDNO clauditor_preserve
-  clauditor_purge:
+    IDYES __clauditor_purge \
+    IDNO __clauditor_preserve
+  __clauditor_purge:
     ExecWait '"$INSTDIR\clauditor.exe" --cleanup --purge'
-    Goto clauditor_done
-  clauditor_preserve:
+    Goto __clauditor_done
+  __clauditor_preserve:
     ExecWait '"$INSTDIR\clauditor.exe" --cleanup'
-  clauditor_done:
+  __clauditor_done:
 !macroend
