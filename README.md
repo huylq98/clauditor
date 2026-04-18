@@ -97,8 +97,6 @@ Clauditor checks for a newer release on every launch. If one is available, a dis
 
 Every release is signed with a minisign keypair; the public key is baked into the app binary. Tampered updates are rejected by the signature check.
 
-**Enterprise opt-out:** build with `cargo tauri build --no-default-features --features msi-only` to compile the updater plugin out entirely. Users of such builds stay on their current version and upgrade by downloading a new MSI manually.
-
 ## Keyboard shortcuts
 
 Press `Ctrl/⌘+/` inside the app to open the full cheat sheet.

@@ -18,7 +18,7 @@ tauri-plugin-notification = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-store = "2"
-tauri-plugin-updater = { version = "2", optional = true }
+tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 
 tokio = { version = "1", features = ["full"] }
@@ -51,8 +51,5 @@ subtle = "2"
 tempfile = "3"
 
 [features]
-default = ["auto-update"]
-auto-update = ["dep:tauri-plugin-updater"]
-msi-only = []
 # Custom protocol required on mobile
 custom-protocol = ["tauri/custom-protocol"]
