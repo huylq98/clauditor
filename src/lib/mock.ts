@@ -23,6 +23,25 @@ interface MockSession {
 const sessions = new Map<B.SessionId, MockSession>();
 let idCounter = 0;
 
+let mockPreferences: B.Preferences = {
+  version: 1,
+  appearance: { theme: 'dark', uiScale: 100 },
+  shortcuts: {},
+};
+
+const mockInstalledHooks: B.InstalledHooks = {
+  settingsPath: 'C:\\Users\\demo\\.claude\\settings.json',
+  settingsPresent: true,
+  parseError: null,
+  entries: [
+    { event: 'UserPromptSubmit', status: 'present' },
+    { event: 'PreToolUse', status: 'present' },
+    { event: 'PostToolUse', status: 'present' },
+    { event: 'Stop', status: 'missing' },
+    { event: 'Notification', status: 'present' },
+  ],
+};
+
 const welcome = (name: string, cwd: string) =>
   [
     '\x1b[38;5;208m',
@@ -217,6 +236,17 @@ export const mock = {
 
       case 'dialog_pick_directory':
         return (window.prompt('(mock) working directory:', 'C:\\Users\\demo\\repo') ?? null) as T;
+
+      case 'get_preferences':
+        return mockPreferences as unknown as T;
+      case 'set_preferences':
+        mockPreferences = (args as { preferences: B.Preferences }).preferences;
+        return undefined as unknown as T;
+      case 'read_installed_hooks':
+        return mockInstalledHooks as unknown as T;
+      case 'reinstall_hooks':
+        for (const e of mockInstalledHooks.entries) e.status = 'present';
+        return undefined as unknown as T;
 
       default:
         console.warn('[mock] unknown command:', cmd);
