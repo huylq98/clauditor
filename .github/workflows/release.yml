@@ -11,9 +11,7 @@ on:
         type: string
 
 permissions:
-  contents: write
-  id-token: write          # required for build-provenance attestation
-  attestations: write      # required for build-provenance attestation
+  contents: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -31,11 +29,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           run_install: false
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: 24
           cache: pnpm
@@ -64,9 +62,13 @@ jobs:
             target: aarch64-unknown-linux-gnu
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
+    permissions:
+      contents: write        # publish draft release
+      id-token: write        # sigstore OIDC for attestation
+      attestations: write    # build-provenance attestation
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Linux system deps
         if: startsWith(matrix.os, 'ubuntu')
@@ -87,7 +89,7 @@ jobs:
         with:
           run_install: false
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: 24
           cache: pnpm
@@ -123,7 +125,7 @@ jobs:
       # with `gh attestation verify <file> --repo huylq98/clauditor`.
       # ─────────────────────────────────────────────────────────────
       - name: Generate build provenance attestation
-        uses: actions/attest-build-provenance@v4
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4
         with:
           subject-path: |
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
