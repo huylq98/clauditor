@@ -9,12 +9,14 @@ import { TerminalHost } from '@/components/TerminalHost';
 import { EmptyState } from '@/components/EmptyState';
 import { CommandPalette } from '@/components/CommandPalette';
 import { ShortcutsDialog } from '@/components/ShortcutsDialog';
+import { UpdateBanner } from '@/components/UpdateBanner';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { api, on } from '@/lib/ipc';
 import { probeDims } from '@/lib/terminal';
 import { useSessions, deriveSessionList } from '@/store/sessions';
 import { useTree } from '@/store/tree';
 import { useRecents } from '@/store/recentCwds';
+import { useUpdater } from '@/store/updater';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 type KillTarget = { id: string; name: string } | null;
@@ -34,6 +36,7 @@ export default function App() {
   const mergeActivity = useTree((s) => s.mergeActivity);
   const dropTree = useTree((s) => s.drop);
   const pushRecent = useRecents((s) => s.push);
+  const checkUpdate = useUpdater((s) => s.check);
 
   const [killTarget, setKillTarget] = useState<KillTarget>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -161,10 +164,15 @@ export default function App() {
 
   useKeyboardShortcuts({ onNewSession: newSession, onCloseActive: closeActive });
 
+  useEffect(() => {
+    void checkUpdate();
+  }, [checkUpdate]);
+
   return (
     <TooltipProvider delayDuration={180}>
       <div className="flex h-screen flex-col">
         <TitleBar />
+        <UpdateBanner />
         <div className="flex flex-1 min-h-0">
           <Sidebar />
           <main className="relative flex flex-1 min-w-0 flex-col">
