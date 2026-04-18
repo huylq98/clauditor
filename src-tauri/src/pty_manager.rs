@@ -375,6 +375,14 @@ impl PtyManager {
         Ok(desc)
     }
 
+    pub fn child_pids(&self) -> Vec<u32> {
+        self.sessions
+            .lock()
+            .values()
+            .filter_map(|s| s.pid)
+            .collect()
+    }
+
     pub fn kill_all(&self) -> u32 {
         // Take the lock once: collect live IDs and drop the master/writer
         // for each in the same critical section. Previous implementation

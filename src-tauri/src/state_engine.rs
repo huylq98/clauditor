@@ -153,8 +153,12 @@ impl StateEngine {
             Hook::Stop => {
                 self.cancel_stop(id);
                 let engine = self.clone();
+                #[cfg(feature = "test-hooks")]
+                let stop_grace = crate::test_hooks::stop_grace();
+                #[cfg(not(feature = "test-hooks"))]
+                let stop_grace = STOP_GRACE;
                 let handle = async_runtime::spawn(async move {
-                    tokio::time::sleep(STOP_GRACE).await;
+                    tokio::time::sleep(stop_grace).await;
                     if engine.get(id) == Some(SessionState::Running) {
                         engine.set(id, SessionState::AwaitingUser);
                     }
@@ -195,8 +199,12 @@ impl StateEngine {
 
     fn arm_idle(&self, id: SessionId) {
         let engine = self.clone();
+        #[cfg(feature = "test-hooks")]
+        let idle_timeout = crate::test_hooks::idle_timeout();
+        #[cfg(not(feature = "test-hooks"))]
+        let idle_timeout = IDLE_TIMEOUT;
         let handle = async_runtime::spawn(async move {
-            tokio::time::sleep(IDLE_TIMEOUT).await;
+            tokio::time::sleep(idle_timeout).await;
             let cur = engine.get(id);
             if matches!(
                 cur,
@@ -212,6 +220,10 @@ impl StateEngine {
             }
             e.idle_task = Some(handle);
         }
+    }
+
+    pub fn snapshot(&self, id: &SessionId) -> Option<SessionState> {
+        self.inner.lock().get(id).map(|e| e.state)
     }
 
     fn cancel_stop(&self, id: SessionId) {

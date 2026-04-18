@@ -53,3 +53,4 @@ tempfile = "3"
 [features]
 # Custom protocol required on mobile
 custom-protocol = ["tauri/custom-protocol"]
+test-hooks = []

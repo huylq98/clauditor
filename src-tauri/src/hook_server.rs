@@ -73,7 +73,11 @@ pub async fn start(
         .route("/hook/:event", post(handle))
         .with_state(state);
 
-    let addr: SocketAddr = ([127, 0, 0, 1], PORT).into();
+    #[cfg(feature = "test-hooks")]
+    let port = crate::test_hooks::hook_port();
+    #[cfg(not(feature = "test-hooks"))]
+    let port = PORT;
+    let addr: SocketAddr = ([127, 0, 0, 1], port).into();
     let listener = tokio::net::TcpListener::bind(addr).await?;
     let handle = tokio::spawn(async move {
         if let Err(e) = axum::serve(listener, app).await {
