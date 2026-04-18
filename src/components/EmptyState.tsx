@@ -1,13 +1,11 @@
 import { Terminal } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, modKey as mod } from '@/lib/utils';
 
 interface EmptyStateProps {
   onNewSession: () => void;
 }
 
 export function EmptyState({ onNewSession }: EmptyStateProps) {
-  const isMac = typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac OS X');
-  const mod = isMac ? '⌘' : 'Ctrl';
 
   return (
     <div className="flex h-full flex-col items-center justify-center gap-6 bg-[var(--color-bg)] p-8 text-center">

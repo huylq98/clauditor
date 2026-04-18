@@ -32,7 +32,7 @@ jobs:
       backend: ${{ steps.f.outputs.backend }}
       workflows: ${{ steps.f.outputs.workflows }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - id: f
         uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4
         with:
@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Install actionlint
         run: |
           bash <(curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
@@ -77,13 +77,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           run_install: false
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: 24
           cache: pnpm
@@ -98,7 +98,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: playwright-cache
-        uses: actions/cache@v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -121,7 +121,7 @@ jobs:
 
       - name: Upload UI review screenshots
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ui-review-screenshots
           path: tests/artifacts/review/
@@ -129,7 +129,7 @@ jobs:
 
       - name: Upload Playwright HTML report on failure
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: playwright-report
           path: playwright-report/
@@ -145,13 +145,13 @@ jobs:
     timeout-minutes: 10
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           run_install: false
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: 24
           cache: pnpm
@@ -160,7 +160,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: playwright-cache
-        uses: actions/cache@v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -180,7 +180,7 @@ jobs:
 
       - name: Upload perf report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: perf-report
           path: tests/artifacts/perf/
@@ -199,7 +199,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Linux system deps
         if: matrix.os == 'ubuntu-latest'
@@ -236,13 +236,35 @@ jobs:
         run: cargo test --all
 
   # ─────────────────────────────────────────────────────────────────
+  # cargo audit: fail on high/critical advisories in our direct deps.
+  # Transitive advisories in Tauri's own gtk/webkit2gtk/phf chain are
+  # unavoidable until upstream updates land — ignore them explicitly.
+  # ─────────────────────────────────────────────────────────────────
+  cargo-audit:
+    needs: filter
+    if: needs.filter.outputs.backend == 'true' || needs.filter.outputs.workflows == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: src-tauri
+          # Transitive-only advisories inherited through tauri's gtk3 / webkit2gtk
+          # / kuchikiki / tauri-utils chain. These fail on us but cannot be fixed
+          # locally — they clear when tauri-rs updates its deps. Re-audit this
+          # list every time we bump `tauri` in Cargo.toml.
+          ignore: "RUSTSEC-2017-0008,RUSTSEC-2024-0370,RUSTSEC-2024-0411,RUSTSEC-2024-0412,RUSTSEC-2024-0413,RUSTSEC-2024-0414,RUSTSEC-2024-0415,RUSTSEC-2024-0416,RUSTSEC-2024-0417,RUSTSEC-2024-0418,RUSTSEC-2024-0419,RUSTSEC-2024-0420,RUSTSEC-2024-0429,RUSTSEC-2025-0057,RUSTSEC-2025-0075,RUSTSEC-2025-0080,RUSTSEC-2025-0081,RUSTSEC-2025-0098,RUSTSEC-2025-0100,RUSTSEC-2026-0097"
+
+  # ─────────────────────────────────────────────────────────────────
   # Aggregating gate. `main` branch protection requires only this
   # single check — it fans out to the individual jobs via `needs` and
   # fails the overall run if any required upstream failed.
   # Skipped upstream jobs (path-filter excluded) count as passing.
   # ─────────────────────────────────────────────────────────────────
   ci-gate:
-    needs: [actionlint, filter, frontend, backend]
+    needs: [actionlint, filter, frontend, backend, cargo-audit]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -254,19 +276,21 @@ jobs:
           filter="${{ needs.filter.result }}"
           frontend="${{ needs.frontend.result }}"
           backend="${{ needs.backend.result }}"
+          audit="${{ needs.cargo-audit.result }}"
 
           echo "actionlint=$actionlint"
           echo "filter=$filter"
           echo "frontend=$frontend"
           echo "backend=$backend"
+          echo "cargo-audit=$audit"
 
           # filter + actionlint must always succeed.
           [ "$actionlint" = "success" ] || { echo "actionlint failed"; exit 1; }
           [ "$filter" = "success" ] || { echo "filter failed"; exit 1; }
 
-          # frontend + backend may be skipped (path-filter excluded)
-          # but must not have failed.
-          for j in "frontend:$frontend" "backend:$backend"; do
+          # frontend + backend + cargo-audit may be skipped (path-filter
+          # excluded) but must not have failed.
+          for j in "frontend:$frontend" "backend:$backend" "cargo-audit:$audit"; do
             name="${j%:*}"; res="${j#*:}"
             case "$res" in
               success|skipped) ;;

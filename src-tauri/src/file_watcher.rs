@@ -169,26 +169,30 @@ impl FileWatcher {
     }
 
     pub fn read_file(&self, sid: SessionId, rel: &str) -> Option<crate::types::FilePreview> {
+        // Reject traversal characters in the raw input before we join — catches
+        // `../`, `\..\`, NUL bytes, and absolute paths that would escape the root.
+        if rel.contains('\0') || rel.split(['/', '\\']).any(|c| c == "..") {
+            return None;
+        }
         let guard = self.watchers.lock();
         let entry = guard.get(&sid)?;
         let abs = entry.root.join(rel);
-        let rel_check = abs.strip_prefix(&entry.root).ok()?;
-        if rel_check
-            .components()
-            .any(|c| matches!(c, std::path::Component::ParentDir))
-        {
+        // Canonicalize both sides so symlinks can't aim outside the root.
+        let abs_canon = std::fs::canonicalize(&abs).ok()?;
+        let root_canon = std::fs::canonicalize(&entry.root).ok()?;
+        if !abs_canon.starts_with(&root_canon) {
             return None;
         }
-        let meta = std::fs::metadata(&abs).ok()?;
+        let meta = std::fs::metadata(&abs_canon).ok()?;
         if !meta.is_file() {
             return None;
         }
         const MAX: u64 = 512 * 1024;
-        let mut content = std::fs::read(&abs).ok()?;
+        use std::io::Read;
+        let mut file = std::fs::File::open(&abs_canon).ok()?;
+        let mut content = Vec::with_capacity(MAX as usize);
+        file.by_ref().take(MAX).read_to_end(&mut content).ok()?;
         let truncated = meta.len() > MAX;
-        if truncated {
-            content.truncate(MAX as usize);
-        }
         let text = String::from_utf8_lossy(&content).into_owned();
         let binary = content.contains(&0);
         Some(crate::types::FilePreview {

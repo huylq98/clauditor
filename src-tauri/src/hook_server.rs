@@ -10,6 +10,7 @@ use axum::{
     Json, Router,
 };
 use serde_json::{json, Value};
+use subtle::ConstantTimeEq;
 
 use crate::activity_service::{ActivityService, HookActivity};
 use crate::pty_manager::PtyManager;
@@ -62,7 +63,7 @@ async fn handle(
     let token_ok = headers
         .get("X-Clauditor-Token")
         .and_then(|v| v.to_str().ok())
-        .map(|t| t == state.token.as_str())
+        .map(|t| t.as_bytes().ct_eq(state.token.as_bytes()).into())
         .unwrap_or(false);
     if !token_ok {
         return (StatusCode::FORBIDDEN, Json(json!({"error": "forbidden"})));

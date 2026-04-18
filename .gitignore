@@ -49,6 +49,7 @@ lerna-debug.log*
 .claude/
 .superpowers/
 docs/superpowers/
+.worktrees/
 
 # Tauri signing keys (NEVER commit)
 ~/.tauri/
