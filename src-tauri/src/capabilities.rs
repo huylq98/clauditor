@@ -450,12 +450,23 @@ fn scan_mcp_servers(
 pub fn list_capabilities(claude_dir: &std::path::Path) -> CapabilitiesSnapshot {
     let mut items = Vec::new();
     let mut parse_warnings = Vec::new();
+    if !claude_dir.exists() {
+        parse_warnings.push(format!("{} not found", claude_dir.display()));
+        return CapabilitiesSnapshot {
+            items,
+            scanned_at: chrono::Utc::now().timestamp_millis(),
+            parse_warnings,
+        };
+    }
     scan_plugin_skills(claude_dir, &mut items, &mut parse_warnings);
     scan_plugin_subagents(claude_dir, &mut items, &mut parse_warnings);
     scan_user_subagents(claude_dir, &mut items, &mut parse_warnings);
+    scan_mcp_servers(claude_dir, &mut items, &mut parse_warnings);
     scan_plugin_commands(claude_dir, &mut items, &mut parse_warnings);
     scan_user_commands(claude_dir, &mut items, &mut parse_warnings);
-    scan_mcp_servers(claude_dir, &mut items, &mut parse_warnings);
+    if items.is_empty() && parse_warnings.is_empty() {
+        parse_warnings.push(format!("{} appears empty", claude_dir.display()));
+    }
     dedup_by_greatest_version(&mut items);
     CapabilitiesSnapshot {
         items,
@@ -630,5 +641,24 @@ mod tests {
             .parse_warnings
             .iter()
             .any(|w| w.contains("settings.json")));
+    }
+
+    #[test]
+    fn empty_claude_dir_returns_empty_snapshot_with_warning() {
+        let tmp = tempfile::tempdir().unwrap();
+        let snap = list_capabilities(tmp.path());
+        assert!(snap.items.is_empty());
+        assert_eq!(snap.parse_warnings.len(), 1);
+        assert!(
+            snap.parse_warnings[0].contains("not found")
+                || snap.parse_warnings[0].contains("empty")
+        );
+    }
+
+    #[test]
+    fn missing_claude_dir_returns_empty_snapshot_with_warning() {
+        let snap = list_capabilities(std::path::Path::new("/definitely/does/not/exist"));
+        assert!(snap.items.is_empty());
+        assert!(!snap.parse_warnings.is_empty());
     }
 }
