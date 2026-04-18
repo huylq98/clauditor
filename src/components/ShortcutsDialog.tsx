@@ -1,10 +1,7 @@
 import { useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Keyboard } from 'lucide-react';
-import { cn } from '@/lib/utils';
-
-const isMac = typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac OS X');
-const mod = isMac ? '⌘' : 'Ctrl';
+import { cn, modKey as mod } from '@/lib/utils';
 
 const GROUPS: { heading: string; items: { keys: string; label: string }[] }[] = [
   {

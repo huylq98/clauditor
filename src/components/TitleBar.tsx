@@ -1,9 +1,6 @@
 import { Minus, Square, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, isMac } from '@/lib/utils';
 import { isTauri } from '@/lib/ipc';
-
-const isMac =
-  typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac OS X');
 
 async function getWindow() {
   if (!isTauri) return null;
