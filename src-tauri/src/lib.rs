@@ -8,6 +8,7 @@ mod cleanup;
 mod commands;
 mod file_watcher;
 mod hook_server;
+mod preferences_store;
 mod pty_manager;
 mod session_store;
 mod settings_installer;
