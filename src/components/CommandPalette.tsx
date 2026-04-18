@@ -11,8 +11,10 @@ import {
   Keyboard,
   Settings,
   Terminal as TerminalIcon,
+  Layers,
 } from 'lucide-react';
 import { useUi } from '@/store/ui';
+import { useCapabilitiesStore } from '@/store/capabilities';
 import { useSessions, deriveSessionList } from '@/store/sessions';
 import { useRecents } from '@/store/recentCwds';
 import { api } from '@/lib/ipc';
@@ -120,6 +122,12 @@ export function CommandPalette({
                   label="Settings"
                   hint={hint('settings')}
                   onSelect={() => run(onShowSettings)}
+                />
+                <PaletteItem
+                  icon={<Layers size={14} />}
+                  label="Browse capabilities"
+                  hint={hint('browse-capabilities')}
+                  onSelect={() => run(() => useCapabilitiesStore.getState().openSheet())}
                 />
                 <PaletteItem
                   icon={<Skull size={14} />}
