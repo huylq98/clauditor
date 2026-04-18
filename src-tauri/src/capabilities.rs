@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
 pub enum CapabilityKind {
     Skill,
@@ -157,10 +157,55 @@ fn scan_plugin_skills(
     }
 }
 
+fn version_rank(v: &str) -> impl Ord + '_ {
+    (v != "unknown", v)
+}
+
+fn dedup_by_greatest_version(items: &mut Vec<Capability>) {
+    use std::collections::HashMap;
+    let mut best: HashMap<(CapabilityKind, String, String, String), (String, usize)> =
+        HashMap::new();
+    let mut to_remove: Vec<usize> = Vec::new();
+    for (idx, cap) in items.iter().enumerate() {
+        if let Source::Plugin {
+            marketplace,
+            plugin,
+            version,
+        } = &cap.source
+        {
+            let key = (
+                cap.kind.clone(),
+                marketplace.clone(),
+                plugin.clone(),
+                cap.name.clone(),
+            );
+            match best.get(&key) {
+                None => {
+                    best.insert(key, (version.clone(), idx));
+                }
+                Some((existing_ver, existing_idx)) => {
+                    if version_rank(version) > version_rank(existing_ver) {
+                        to_remove.push(*existing_idx);
+                        best.insert(key, (version.clone(), idx));
+                    } else {
+                        to_remove.push(idx);
+                    }
+                }
+            }
+        }
+    }
+    to_remove.sort_unstable();
+    to_remove.dedup();
+    for idx in to_remove.into_iter().rev() {
+        items.swap_remove(idx);
+    }
+}
+
 pub fn list_capabilities(claude_dir: &std::path::Path) -> CapabilitiesSnapshot {
     let mut items = Vec::new();
     let mut parse_warnings = Vec::new();
     scan_plugin_skills(claude_dir, &mut items, &mut parse_warnings);
+    dedup_by_greatest_version(&mut items);
     CapabilitiesSnapshot {
         items,
         scanned_at: chrono::Utc::now().timestamp_millis(),
@@ -204,6 +249,18 @@ mod tests {
             "skill:plugin:marketplace1/plugin1/1.0.0:demo-skill"
         );
         assert!(snap.parse_warnings.is_empty());
+    }
+
+    #[test]
+    fn dedups_multi_version_skills_to_greatest() {
+        let snap = list_capabilities(&fixture("skill_multi_version"));
+        let skills: Vec<_> = snap
+            .items
+            .iter()
+            .filter(|c| c.kind == CapabilityKind::Skill)
+            .collect();
+        assert_eq!(skills.len(), 1, "expected exactly one skill after dedup");
+        assert_eq!(skills[0].description, "version 2.0.0");
     }
 
     #[test]
