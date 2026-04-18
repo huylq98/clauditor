@@ -236,3 +236,50 @@ export const mock = {
     };
   },
 };
+
+// ---------------------------------------------------------------------------
+// Updater mock — drives Playwright tests for the UpdateBanner without hitting
+// the real tauri-plugin-updater. Tests override per-case via:
+//   window.__MOCK_UPDATE__ = { available: true, version: '99.0.0' }
+// before navigating to the page.
+// ---------------------------------------------------------------------------
+
+type MockUpdateConfig = {
+  available: boolean;
+  version?: string;
+  body?: string;
+  date?: string;
+};
+
+type ProgressEvent =
+  | { event: 'Started'; data: { contentLength: number } }
+  | { event: 'Progress'; data: { chunkLength: number } }
+  | { event: 'Finished' };
+
+declare global {
+  interface Window {
+    __MOCK_UPDATE__?: MockUpdateConfig;
+  }
+}
+
+export const updaterMock = {
+  async check() {
+    const cfg = (typeof window !== 'undefined' && window.__MOCK_UPDATE__) || { available: false };
+    if (!cfg.available) return null;
+    return {
+      available: true,
+      version: cfg.version ?? '99.0.0',
+      body: cfg.body ?? 'Mock release notes',
+      date: cfg.date ?? new Date().toISOString(),
+      async downloadAndInstall(onProgress?: (ev: ProgressEvent) => void) {
+        onProgress?.({ event: 'Started', data: { contentLength: 1000 } });
+        onProgress?.({ event: 'Progress', data: { chunkLength: 500 } });
+        onProgress?.({ event: 'Progress', data: { chunkLength: 500 } });
+        onProgress?.({ event: 'Finished' });
+      },
+    };
+  },
+  async relaunch() {
+    // No-op in browser mock.
+  },
+};

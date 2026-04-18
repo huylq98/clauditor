@@ -30,6 +30,7 @@
     }
   },
   "bundle": {
+    "createUpdaterArtifacts": true,
     "active": true,
     "targets": "all",
     "icon": [
@@ -50,6 +51,17 @@
     "linux": {
       "deb": {
         "postRemoveScript": "installer/linux/debian/postrm"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ1MDRDNURDM0NBQ0NGMDQKUldRRXo2dzgzTVVFUmNsRXdROXlMYkdNVDZoeGlaWkF3TnFuOHJsTFJoYTQrQ2kxaDdqMlNqZ28K",
+      "endpoints": [
+        "https://github.com/huylq98/clauditor/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
       }
     }
   }
