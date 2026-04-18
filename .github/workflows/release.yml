@@ -119,6 +119,21 @@ jobs:
           prerelease: false
           args: --target ${{ matrix.target }}
 
+      - name: Guard against test-hooks in release binary
+        shell: bash
+        run: |
+          set -e
+          # Search for symbols that should only exist in test-hooks builds.
+          # The strings binary works on both ELF (Linux/macOS) and PE (Windows).
+          for bin in src-tauri/target/release/clauditor src-tauri/target/release/clauditor.exe src-tauri/target/release/bundle/**/clauditor*; do
+            [ -e "$bin" ] || continue
+            if strings "$bin" 2>/dev/null | grep -qE 'dump_fsm|hook_port_cmd|__test__'; then
+              echo "ERROR: release binary $bin contains test-hooks symbols" >&2
+              echo "       This means the build accidentally enabled the test-hooks feature." >&2
+              exit 1
+            fi
+            echo "OK: $bin contains no test-hooks symbols"
+          done
       # ─────────────────────────────────────────────────────────────
       # Supply-chain attestation: sigstore-signed proof that this
       # installer came from this commit on this workflow. Users verify
