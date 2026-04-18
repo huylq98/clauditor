@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Command } from 'cmdk';
 import * as Dialog from '@radix-ui/react-dialog';
 import {
@@ -9,6 +9,7 @@ import {
   Trash2,
   PanelLeft,
   Keyboard,
+  Settings,
   Terminal as TerminalIcon,
 } from 'lucide-react';
 import { useUi } from '@/store/ui';
@@ -17,17 +18,21 @@ import { useRecents } from '@/store/recentCwds';
 import { api } from '@/lib/ipc';
 import { probeDims } from '@/lib/terminal';
 import { cn, shortId } from '@/lib/utils';
+import { useKeymap } from '@/store/keymap';
+import { formatChord, type ActionId } from '@/lib/keymap';
 
 interface CommandPaletteProps {
   onNewSession: () => void;
   onReopenCwd: (cwd: string) => void;
   onShowShortcuts: () => void;
+  onShowSettings: () => void;
 }
 
 export function CommandPalette({
   onNewSession,
   onReopenCwd,
   onShowShortcuts,
+  onShowSettings,
 }: CommandPaletteProps) {
   const open = useUi((s) => s.paletteOpen);
   const setOpen = useUi((s) => s.setPaletteOpen);
@@ -37,17 +42,11 @@ export function CommandPalette({
   const sessions = useMemo(() => deriveSessionList(order, byId), [order, byId]);
   const setActive = useSessions((s) => s.setActive);
   const recents = useRecents((s) => s.entries);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
-        e.preventDefault();
-        setOpen(!open);
-      }
-    };
-    window.addEventListener('keydown', handler, true);
-    return () => window.removeEventListener('keydown', handler, true);
-  }, [open, setOpen]);
+  const chords = useKeymap((s) => s.chords);
+  const hint = (id: ActionId) => {
+    const c = chords[id];
+    return c ? formatChord(c) : undefined;
+  };
 
   const close = () => setOpen(false);
   const run = (fn: () => void | Promise<void>) => {
@@ -100,20 +99,26 @@ export function CommandPalette({
                 <PaletteItem
                   icon={<FolderPlus size={14} />}
                   label="New session"
-                  hint="Ctrl+T"
+                  hint={hint('new-session')}
                   onSelect={() => run(onNewSession)}
                 />
                 <PaletteItem
                   icon={<PanelLeft size={14} />}
                   label="Toggle sidebar"
-                  hint="Ctrl+B"
+                  hint={hint('toggle-sidebar')}
                   onSelect={() => run(toggleSidebar)}
                 />
                 <PaletteItem
                   icon={<Keyboard size={14} />}
                   label="Keyboard shortcuts"
-                  hint="Ctrl+/"
+                  hint={hint('shortcuts-cheatsheet')}
                   onSelect={() => run(onShowShortcuts)}
+                />
+                <PaletteItem
+                  icon={<Settings size={14} />}
+                  label="Settings"
+                  hint={hint('settings')}
+                  onSelect={() => run(onShowSettings)}
                 />
                 <PaletteItem
                   icon={<Skull size={14} />}
@@ -149,7 +154,7 @@ export function CommandPalette({
                       key={s.id}
                       icon={<TerminalIcon size={14} />}
                       label={s.name || `session-${shortId(s.id)}`}
-                      hint={i < 9 ? `Ctrl+${i + 1}` : undefined}
+                      hint={i < 9 ? hint(`jump-tab-${i + 1}` as ActionId) : undefined}
                       description={s.cwd}
                       onSelect={() => run(() => setActive(s.id))}
                     />

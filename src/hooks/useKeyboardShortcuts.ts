@@ -1,68 +1,63 @@
 import { useEffect } from 'react';
 import { useSessions } from '@/store/sessions';
 import { useUi } from '@/store/ui';
+import { useKeymap } from '@/store/keymap';
+import { matchesChord, type ActionId } from '@/lib/keymap';
 
 interface ShortcutHandlers {
   onNewSession: () => void;
   onCloseActive: () => void;
+  onShowShortcuts: () => void;
+  onShowSettings: () => void;
 }
 
-export function useKeyboardShortcuts({ onNewSession, onCloseActive }: ShortcutHandlers) {
+export function useKeyboardShortcuts({
+  onNewSession,
+  onCloseActive,
+  onShowShortcuts,
+  onShowSettings,
+}: ShortcutHandlers) {
   const setActive = useSessions((s) => s.setActive);
   const toggleSidebar = useUi((s) => s.toggleSidebar);
+  const setPaletteOpen = useUi((s) => s.setPaletteOpen);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      const mod = e.ctrlKey || e.metaKey;
-      if (!mod) return;
+      const chords = useKeymap.getState().chords;
+      const match = (id: ActionId) => matchesChord(e, chords[id]);
 
-      // Ctrl/Cmd + T  -> new session
-      if (e.key === 't' || e.key === 'T') {
+      if (match('new-session')) { e.preventDefault(); onNewSession(); return; }
+      if (match('close-active')) { e.preventDefault(); onCloseActive(); return; }
+      if (match('toggle-sidebar')) { e.preventDefault(); toggleSidebar(); return; }
+      if (match('command-palette')) {
         e.preventDefault();
-        onNewSession();
+        setPaletteOpen(!useUi.getState().paletteOpen);
         return;
       }
-
-      // Ctrl/Cmd + W  -> close active
-      if (e.key === 'w' || e.key === 'W') {
-        e.preventDefault();
-        onCloseActive();
-        return;
-      }
-
-      // Ctrl/Cmd + B  -> toggle sidebar
-      if (e.key === 'b' || e.key === 'B') {
-        e.preventDefault();
-        toggleSidebar();
-        return;
-      }
-
-      // Ctrl/Cmd + 1..9  -> jump to tab N
-      if (/^[1-9]$/.test(e.key)) {
-        const idx = parseInt(e.key, 10) - 1;
-        const order = useSessions.getState().order;
-        const id = order[idx];
-        if (id) {
-          e.preventDefault();
-          setActive(id);
-        }
-        return;
-      }
-
-      // Ctrl/Cmd + Shift + ]  /  [  -> next/prev tab
-      if (e.shiftKey && (e.key === ']' || e.key === '[')) {
+      if (match('shortcuts-cheatsheet')) { e.preventDefault(); onShowShortcuts(); return; }
+      if (match('settings')) { e.preventDefault(); onShowSettings(); return; }
+      if (match('next-tab') || match('prev-tab')) {
         e.preventDefault();
         const { order, activeId } = useSessions.getState();
         if (!order.length) return;
         const i = activeId ? order.indexOf(activeId) : -1;
         const n = order.length;
-        const nextIdx = e.key === ']' ? (i + 1 + n) % n : (i - 1 + n) % n;
+        const forward = match('next-tab');
+        const nextIdx = forward ? (i + 1 + n) % n : (i - 1 + n) % n;
         setActive(order[nextIdx]);
         return;
       }
+      for (let i = 1; i <= 9; i++) {
+        if (match(`jump-tab-${i}` as ActionId)) {
+          e.preventDefault();
+          const id = useSessions.getState().order[i - 1];
+          if (id) setActive(id);
+          return;
+        }
+      }
 
-      // Ctrl/Cmd + Shift + ←/→ -> shrink/grow sidebar (skips if collapsed).
-      if (e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      // Non-configurable UI nudge kept from before.
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
         const ui = useUi.getState();
         if (ui.sidebarCollapsed) return;
         e.preventDefault();
@@ -70,8 +65,7 @@ export function useKeyboardShortcuts({ onNewSession, onCloseActive }: ShortcutHa
         ui.setSidebarWidth(ui.sidebarWidth + delta);
       }
     };
-    // Capture phase so we fire BEFORE xterm's keyboard handler swallows the event.
     window.addEventListener('keydown', handler, true);
     return () => window.removeEventListener('keydown', handler, true);
-  }, [onNewSession, onCloseActive, setActive, toggleSidebar]);
+  }, [onNewSession, onCloseActive, onShowShortcuts, onShowSettings, setActive, toggleSidebar, setPaletteOpen]);
 }

@@ -9,6 +9,7 @@ import { TerminalHost } from '@/components/TerminalHost';
 import { EmptyState } from '@/components/EmptyState';
 import { CommandPalette } from '@/components/CommandPalette';
 import { ShortcutsDialog } from '@/components/ShortcutsDialog';
+import { SettingsDialog } from '@/components/SettingsDialog';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { api, on } from '@/lib/ipc';
@@ -18,6 +19,7 @@ import { useTree } from '@/store/tree';
 import { useRecents } from '@/store/recentCwds';
 import { useUpdater } from '@/store/updater';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { usePreferences } from '@/store/preferences';
 
 type KillTarget = { id: string; name: string } | null;
 
@@ -38,8 +40,13 @@ export default function App() {
   const pushRecent = useRecents((s) => s.push);
   const checkUpdate = useUpdater((s) => s.check);
 
+  const hydrate = usePreferences((s) => s.hydrate);
+  const theme = usePreferences((s) => s.appearance.theme);
+  const uiScale = usePreferences((s) => s.appearance.uiScale);
+
   const [killTarget, setKillTarget] = useState<KillTarget>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const spawnForCwd = useCallback(
     async (cwd: string | null) => {
@@ -163,11 +170,32 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useKeyboardShortcuts({ onNewSession: newSession, onCloseActive: closeActive });
+  useKeyboardShortcuts({
+    onNewSession: newSession,
+    onCloseActive: closeActive,
+    onShowShortcuts: () => setShortcutsOpen(true),
+    onShowSettings: () => setSettingsOpen(true),
+  });
 
   useEffect(() => {
     void checkUpdate();
   }, [checkUpdate]);
+
+  useEffect(() => {
+    void hydrate();
+  }, [hydrate]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const resolvedTheme =
+      theme === 'system'
+        ? window.matchMedia('(prefers-color-scheme: light)').matches
+          ? 'light'
+          : 'dark'
+        : theme;
+    root.setAttribute('data-theme', resolvedTheme);
+    root.style.setProperty('--ui-scale', String(uiScale));
+  }, [theme, uiScale]);
 
   return (
     <TooltipProvider delayDuration={180}>
@@ -197,8 +225,10 @@ export default function App() {
           onNewSession={newSession}
           onReopenCwd={reopenCwd}
           onShowShortcuts={() => setShortcutsOpen(true)}
+          onShowSettings={() => setSettingsOpen(true)}
         />
         <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
         <AlertDialog
           open={killTarget !== null}
           onOpenChange={(v) => !v && setKillTarget(null)}

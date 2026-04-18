@@ -103,3 +103,26 @@ export interface ActivityDeltaEvent {
   sid: SessionId;
   delta: ActivityDelta;
 }
+
+export interface Appearance {
+  theme: 'dark' | 'light' | 'system';
+  uiScale: number;
+}
+
+export interface Preferences {
+  version: number;
+  appearance: Appearance;
+  shortcuts: Record<string, string | null>;
+}
+
+export type HookStatus = 'present' | 'missing' | 'stale';
+export interface HookEntry {
+  event: string;
+  status: HookStatus;
+}
+export interface InstalledHooks {
+  settingsPath: string;
+  settingsPresent: boolean;
+  parseError: string | null;
+  entries: HookEntry[];
+}

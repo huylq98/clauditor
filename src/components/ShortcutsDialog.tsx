@@ -1,37 +1,8 @@
-import { useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Keyboard } from 'lucide-react';
-import { cn, modKey as mod } from '@/lib/utils';
-
-const GROUPS: { heading: string; items: { keys: string; label: string }[] }[] = [
-  {
-    heading: 'Sessions',
-    items: [
-      { keys: `${mod}+T`, label: 'New session' },
-      { keys: `${mod}+W`, label: 'Close active session' },
-      { keys: `${mod}+1 – ${mod}+9`, label: 'Jump to session 1–9' },
-      { keys: `${mod}+Shift+]`, label: 'Next tab' },
-      { keys: `${mod}+Shift+[`, label: 'Previous tab' },
-      { keys: `Double-click tab`, label: 'Rename session' },
-      { keys: `Drag tab`, label: 'Reorder sessions' },
-    ],
-  },
-  {
-    heading: 'Navigation',
-    items: [
-      { keys: `${mod}+K`, label: 'Command palette' },
-      { keys: `${mod}+B`, label: 'Toggle sidebar' },
-      { keys: `${mod}+/`, label: 'This cheat sheet' },
-    ],
-  },
-  {
-    heading: 'Terminal',
-    items: [
-      { keys: `${mod}+F`, label: 'Search terminal scrollback' },
-      { keys: `Shift+Scroll`, label: 'Fast scroll' },
-    ],
-  },
-];
+import { cn } from '@/lib/utils';
+import { ACTION_CATALOG, formatChord, type ActionId } from '@/lib/keymap';
+import { useKeymap } from '@/store/keymap';
 
 interface ShortcutsDialogProps {
   open: boolean;
@@ -39,16 +10,8 @@ interface ShortcutsDialogProps {
 }
 
 export function ShortcutsDialog({ open, onOpenChange }: ShortcutsDialogProps) {
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
-        e.preventDefault();
-        onOpenChange(!open);
-      }
-    };
-    window.addEventListener('keydown', handler, true);
-    return () => window.removeEventListener('keydown', handler, true);
-  }, [open, onOpenChange]);
+  const chords = useKeymap((s) => s.chords);
+  const groups = groupCatalog();
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -71,27 +34,28 @@ export function ShortcutsDialog({ open, onOpenChange }: ShortcutsDialogProps) {
             <Keyboard size={16} className="text-[var(--color-accent)]" />
             <Dialog.Title className="text-base font-semibold">Keyboard shortcuts</Dialog.Title>
           </div>
-          <Dialog.Description className="sr-only">
-            All keyboard shortcuts in Clauditor.
-          </Dialog.Description>
+          <Dialog.Description className="sr-only">All keyboard shortcuts in Clauditor.</Dialog.Description>
           <div className="mt-4 grid grid-cols-1 gap-5">
-            {GROUPS.map((g) => (
+            {groups.map((g) => (
               <div key={g.heading}>
                 <div className="mb-2 text-[10.5px] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)]">
                   {g.heading}
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  {g.items.map((item) => (
-                    <div
-                      key={item.label}
-                      className="flex items-center justify-between text-sm text-[var(--color-fg-muted)]"
-                    >
-                      <span>{item.label}</span>
-                      <kbd className="rounded border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-0.5 font-mono text-[11px] text-[var(--color-fg)]">
-                        {item.keys}
-                      </kbd>
-                    </div>
-                  ))}
+                  {g.items.map((item) => {
+                    const chord = chords[item.id];
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between text-sm text-[var(--color-fg-muted)]"
+                      >
+                        <span>{item.label}</span>
+                        <kbd className="rounded border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-0.5 font-mono text-[11px] text-[var(--color-fg)]">
+                          {chord ? formatChord(chord) : 'Unbound'}
+                        </kbd>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -100,4 +64,12 @@ export function ShortcutsDialog({ open, onOpenChange }: ShortcutsDialogProps) {
       </Dialog.Portal>
     </Dialog.Root>
   );
+}
+
+function groupCatalog(): Array<{ heading: string; items: { id: ActionId; label: string }[] }> {
+  const by: Record<string, { id: ActionId; label: string }[]> = {};
+  for (const a of ACTION_CATALOG) {
+    (by[a.group] ||= []).push({ id: a.id, label: a.label });
+  }
+  return Object.entries(by).map(([heading, items]) => ({ heading, items }));
 }
