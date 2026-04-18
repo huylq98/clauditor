@@ -18,6 +18,7 @@ import { useTree } from '@/store/tree';
 import { useRecents } from '@/store/recentCwds';
 import { useUpdater } from '@/store/updater';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { usePreferences } from '@/store/preferences';
 
 type KillTarget = { id: string; name: string } | null;
 
@@ -37,6 +38,10 @@ export default function App() {
   const dropTree = useTree((s) => s.drop);
   const pushRecent = useRecents((s) => s.push);
   const checkUpdate = useUpdater((s) => s.check);
+
+  const hydrate = usePreferences((s) => s.hydrate);
+  const theme = usePreferences((s) => s.appearance.theme);
+  const uiScale = usePreferences((s) => s.appearance.uiScale);
 
   const [killTarget, setKillTarget] = useState<KillTarget>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -168,6 +173,22 @@ export default function App() {
   useEffect(() => {
     void checkUpdate();
   }, [checkUpdate]);
+
+  useEffect(() => {
+    void hydrate();
+  }, [hydrate]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const resolvedTheme =
+      theme === 'system'
+        ? window.matchMedia('(prefers-color-scheme: light)').matches
+          ? 'light'
+          : 'dark'
+        : theme;
+    root.setAttribute('data-theme', resolvedTheme);
+    root.style.setProperty('--ui-scale', String(uiScale));
+  }, [theme, uiScale]);
 
   return (
     <TooltipProvider delayDuration={180}>
