@@ -311,12 +311,59 @@ fn dedup_by_greatest_version(items: &mut Vec<Capability>) {
     }
 }
 
+fn scan_mcp_servers(
+    claude_dir: &std::path::Path,
+    out: &mut Vec<Capability>,
+    warnings: &mut Vec<String>,
+) {
+    for fname in ["settings.json", "settings.local.json"] {
+        let path = claude_dir.join(fname);
+        if !path.exists() {
+            continue;
+        }
+        let text = match std::fs::read_to_string(&path) {
+            Ok(t) => t,
+            Err(e) => {
+                warnings.push(format!("read {}: {}", path.display(), e));
+                continue;
+            }
+        };
+        let value: serde_json::Value = match serde_json::from_str(&text) {
+            Ok(v) => v,
+            Err(e) => {
+                warnings.push(format!("parse {}: {}", path.display(), e));
+                continue;
+            }
+        };
+        let Some(servers) = value.get("mcpServers").and_then(|v| v.as_object()) else {
+            continue;
+        };
+        for (name, def) in servers {
+            let description = def
+                .get("description")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            out.push(Capability {
+                id: format!("mcpserver:settings:{}:{}", path.display(), name),
+                kind: CapabilityKind::McpServer,
+                invocation: format!("@{}", name),
+                name: name.clone(),
+                description,
+                when_to_use: None,
+                source: Source::Settings { file: path.clone() },
+            });
+        }
+    }
+}
+
 pub fn list_capabilities(claude_dir: &std::path::Path) -> CapabilitiesSnapshot {
     let mut items = Vec::new();
     let mut parse_warnings = Vec::new();
     scan_plugin_skills(claude_dir, &mut items, &mut parse_warnings);
     scan_plugin_subagents(claude_dir, &mut items, &mut parse_warnings);
     scan_user_subagents(claude_dir, &mut items, &mut parse_warnings);
+    scan_mcp_servers(claude_dir, &mut items, &mut parse_warnings);
     dedup_by_greatest_version(&mut items);
     CapabilitiesSnapshot {
         items,
@@ -437,5 +484,35 @@ mod tests {
             .unwrap();
         assert_eq!(agent.name, "explorer");
         assert!(matches!(&agent.source, Source::User { .. }));
+    }
+
+    #[test]
+    fn parses_well_formed_mcp_servers() {
+        let snap = list_capabilities(&fixture("mcp_well_formed"));
+        let mcps: Vec<_> = snap
+            .items
+            .iter()
+            .filter(|c| c.kind == CapabilityKind::McpServer)
+            .collect();
+        assert_eq!(mcps.len(), 2);
+        let names: Vec<&str> = mcps.iter().map(|c| c.name.as_str()).collect();
+        assert!(names.contains(&"context7"));
+        assert!(names.contains(&"filesystem"));
+        let fs = mcps.iter().find(|c| c.name == "filesystem").unwrap();
+        assert_eq!(fs.description, "Local filesystem access");
+        assert_eq!(fs.invocation, "@filesystem");
+    }
+
+    #[test]
+    fn skips_mcp_with_bad_json_and_warns() {
+        let snap = list_capabilities(&fixture("mcp_bad_json"));
+        assert!(snap
+            .items
+            .iter()
+            .all(|c| c.kind != CapabilityKind::McpServer));
+        assert!(snap
+            .parse_warnings
+            .iter()
+            .any(|w| w.contains("settings.json")));
     }
 }
