@@ -10,6 +10,7 @@ interface UpdaterStore {
   downloaded: number;
   total: number;
   error?: string;
+  errorVisible: boolean;
   dismissed: boolean;
   check: (opts?: { manual?: boolean }) => Promise<void>;
   install: () => Promise<void>;
@@ -22,6 +23,7 @@ export const useUpdater = create<UpdaterStore>((set, get) => ({
   status: 'idle',
   downloaded: 0,
   total: 0,
+  errorVisible: false,
   dismissed: false,
 
   async check(opts) {
@@ -46,7 +48,7 @@ export const useUpdater = create<UpdaterStore>((set, get) => ({
       });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      set({ status: 'error', error: msg });
+      set({ status: 'error', error: msg, errorVisible: !!opts?.manual });
       if (opts?.manual) {
         const { toast } = await import('sonner');
         toast.error(`Update check failed: ${msg}`);
@@ -70,7 +72,7 @@ export const useUpdater = create<UpdaterStore>((set, get) => ({
       await relaunchApp();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      set({ status: 'error', error: msg });
+      set({ status: 'error', error: msg, errorVisible: true });
     }
   },
 
