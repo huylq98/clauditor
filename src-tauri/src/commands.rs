@@ -14,13 +14,13 @@ pub async fn sessions_list(state: State<'_, AppState>) -> Result<Vec<SessionDesc
         .pty
         .list()
         .into_iter()
-        .map(|(id, name, cwd, created_at, pid)| SessionDesc {
-            id,
-            name,
-            cwd,
-            created_at,
-            pid,
-            state: engine.get(id).unwrap_or(SessionState::Exited),
+        .map(|s| SessionDesc {
+            id: s.id,
+            name: s.name,
+            cwd: s.cwd,
+            created_at: s.created_at,
+            pid: s.pid,
+            state: engine.get(s.id).unwrap_or(SessionState::Exited),
         })
         .collect())
 }

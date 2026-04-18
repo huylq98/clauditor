@@ -61,9 +61,27 @@ pub enum PtyEvent {
     Exit(SessionId, Option<i32>),
 }
 
+/// Internal projection of a `Session` — everything stable that a caller
+/// might want without locking the session map. `SessionDesc` includes
+/// the state enum from the state engine and is the public (serializable)
+/// shape; this one is the pty-local view.
+pub struct SessionSnapshot {
+    pub id: SessionId,
+    pub name: String,
+    pub cwd: String,
+    pub created_at: i64,
+    pub pid: Option<u32>,
+}
+
 #[derive(Clone)]
 pub struct PtyManager {
     sessions: Arc<Mutex<HashMap<SessionId, Session>>>,
+    // Parallel index for O(1) `find_by_pid`. The hook server hits this
+    // on every Claude Code tool call; a linear scan of sessions scales
+    // poorly once users accumulate many backgrounded sessions. The
+    // invariant is: for every Session with `pid: Some(n)`, this map
+    // has `n -> sid`. Sessions without a live pid have no entry here.
+    pid_index: Arc<Mutex<HashMap<u32, SessionId>>>,
     app: AppHandle,
     tx: mpsc::UnboundedSender<PtyEvent>,
     token: String,
@@ -75,6 +93,7 @@ impl PtyManager {
         (
             Self {
                 sessions: Arc::new(Mutex::new(HashMap::new())),
+                pid_index: Arc::new(Mutex::new(HashMap::new())),
                 app,
                 tx,
                 token,
@@ -83,11 +102,17 @@ impl PtyManager {
         )
     }
 
-    pub fn list(&self) -> Vec<(SessionId, String, String, i64, Option<u32>)> {
+    pub fn list(&self) -> Vec<SessionSnapshot> {
         self.sessions
             .lock()
             .values()
-            .map(|s| (s.id, s.name.clone(), s.cwd.clone(), s.created_at, s.pid))
+            .map(|s| SessionSnapshot {
+                id: s.id,
+                name: s.name.clone(),
+                cwd: s.cwd.clone(),
+                created_at: s.created_at,
+                pid: s.pid,
+            })
             .collect()
     }
 
@@ -100,11 +125,7 @@ impl PtyManager {
     }
 
     pub fn find_by_pid(&self, pid: u32) -> Option<SessionId> {
-        self.sessions
-            .lock()
-            .values()
-            .find(|s| s.pid == Some(pid))
-            .map(|s| s.id)
+        self.pid_index.lock().get(&pid).copied()
     }
 
     pub fn get_buffer(&self, id: SessionId) -> String {
@@ -154,7 +175,9 @@ impl PtyManager {
             // Dropping the master drops the child handle too.
             s.master.take();
             s.writer.take();
-            s.pid = None;
+            if let Some(pid) = s.pid.take() {
+                self.pid_index.lock().remove(&pid);
+            }
         }
     }
 
@@ -286,6 +309,9 @@ impl PtyManager {
             buffer: Vec::with_capacity(MAX_BUFFER),
         };
         self.sessions.lock().insert(id, session);
+        if let Some(pid) = pid {
+            self.pid_index.lock().insert(pid, id);
+        }
 
         let desc = SessionDesc {
             id,
@@ -301,6 +327,7 @@ impl PtyManager {
         let app = self.app.clone();
         let tx = self.tx.clone();
         let sessions = self.sessions.clone();
+        let pid_index = self.pid_index.clone();
         std::thread::spawn(move || {
             let mut buf = [0u8; 8192];
             loop {
@@ -334,7 +361,9 @@ impl PtyManager {
                 if let Some(s) = sessions.get_mut(&id) {
                     s.master.take();
                     s.writer.take();
-                    s.pid = None;
+                    if let Some(pid) = s.pid.take() {
+                        pid_index.lock().remove(&pid);
+                    }
                 }
             }
             let _ = app.emit("session:exit", SessionExitEvent { id, code });
@@ -349,12 +378,15 @@ impl PtyManager {
         // for each in the same critical section. Previous implementation
         // re-locked once per iteration via is_running() + kill().
         let mut sessions = self.sessions.lock();
+        let mut pid_index = self.pid_index.lock();
         let mut n = 0u32;
         for s in sessions.values_mut() {
             if s.master.is_some() {
                 s.master.take();
                 s.writer.take();
-                s.pid = None;
+                if let Some(pid) = s.pid.take() {
+                    pid_index.remove(&pid);
+                }
                 n += 1;
             }
         }

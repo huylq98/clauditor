@@ -58,6 +58,16 @@ export function useKeyboardShortcuts({ onNewSession, onCloseActive }: ShortcutHa
         const n = order.length;
         const nextIdx = e.key === ']' ? (i + 1 + n) % n : (i - 1 + n) % n;
         setActive(order[nextIdx]);
+        return;
+      }
+
+      // Ctrl/Cmd + Shift + ←/→ -> shrink/grow sidebar (skips if collapsed).
+      if (e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        const ui = useUi.getState();
+        if (ui.sidebarCollapsed) return;
+        e.preventDefault();
+        const delta = e.key === 'ArrowRight' ? 20 : -20;
+        ui.setSidebarWidth(ui.sidebarWidth + delta);
       }
     };
     // Capture phase so we fire BEFORE xterm's keyboard handler swallows the event.
