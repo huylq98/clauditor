@@ -78,17 +78,25 @@ impl ActivityService {
             if was_create {
                 bucket.created.insert(path.clone());
                 bucket.modified.remove(&path);
-            } else if matches!(tool.as_str(), "Edit" | "MultiEdit" | "NotebookEdit") {
-                if !bucket.created.contains(&path) {
-                    bucket.modified.insert(path.clone());
-                }
+            } else if matches!(tool.as_str(), "Edit" | "MultiEdit" | "NotebookEdit")
+                && !bucket.created.contains(&path)
+            {
+                bucket.modified.insert(path.clone());
             }
             (was_create, tool)
         };
 
         let delta = ActivityDelta {
-            created: if was_create { Some(vec![path.clone()]) } else { None },
-            modified: if !was_create { Some(vec![path.clone()]) } else { None },
+            created: if was_create {
+                Some(vec![path.clone()])
+            } else {
+                None
+            },
+            modified: if !was_create {
+                Some(vec![path.clone()])
+            } else {
+                None
+            },
             deleted: None,
             tools: Some({
                 let mut m = HashMap::new();
@@ -96,7 +104,9 @@ impl ActivityService {
                 m
             }),
         };
-        let _ = self.app.emit("activity:delta", ActivityDeltaEvent { sid, delta });
+        let _ = self
+            .app
+            .emit("activity:delta", ActivityDeltaEvent { sid, delta });
     }
 
     pub fn mark_created(&self, sid: SessionId, path: &str) {

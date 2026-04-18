@@ -208,7 +208,9 @@ impl PtyManager {
     pub fn restart(&self, id: SessionId, cols: u16, rows: u16) -> Result<SessionDesc> {
         let (name, cwd) = {
             let sessions = self.sessions.lock();
-            let s = sessions.get(&id).ok_or_else(|| anyhow!("no such session"))?;
+            let s = sessions
+                .get(&id)
+                .ok_or_else(|| anyhow!("no such session"))?;
             (s.name.clone(), s.cwd.clone())
         };
         // Remove the old entry so we can re-insert a fresh one under the same id.
@@ -312,7 +314,10 @@ impl PtyManager {
             }
             // Wait for child exit so we can report the code.
             let mut child = child;
-            let code = child.wait().ok().and_then(|s| s.exit_code().try_into().ok());
+            let code = child
+                .wait()
+                .ok()
+                .and_then(|s| s.exit_code().try_into().ok());
             {
                 let mut sessions = sessions.lock();
                 if let Some(s) = sessions.get_mut(&id) {

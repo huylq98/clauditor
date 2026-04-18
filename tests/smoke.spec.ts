@@ -47,7 +47,7 @@ test('command palette opens on Ctrl+K', async ({ page }) => {
   await page.waitForTimeout(200);
   await page.screenshot({ path: 'tests/artifacts/palette.png', fullPage: true });
   await expect(
-    page.getByPlaceholder(/Type a command or search a session/i),
+    page.getByPlaceholder(/Type a command/i),
   ).toBeVisible();
 });
 

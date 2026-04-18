@@ -3,22 +3,17 @@ use uuid::Uuid;
 
 pub type SessionId = Uuid;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SessionState {
     Starting,
+    #[default]
     Running,
     Idle,
     AwaitingUser,
     AwaitingPermission,
     Working,
     Exited,
-}
-
-impl Default for SessionState {
-    fn default() -> Self {
-        Self::Running
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
