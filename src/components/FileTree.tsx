@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { File, Folder, Search } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { api } from '@/lib/ipc';
 import { useTree } from '@/store/tree';
 import { cn } from '@/lib/utils';
+import { FilePreviewDialog } from './FilePreviewDialog';
 import type { SessionId, TreeEntry } from '@/lib/bindings';
 
 interface FileTreeProps {
@@ -14,9 +15,14 @@ export function FileTree({ sessionId }: FileTreeProps) {
   const bucket = useTree((s) => s.bySession[sessionId]);
   const setEntries = useTree((s) => s.setEntries);
   const setQuery = useTree((s) => s.setQuery);
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
 
   const entries = bucket?.entries ?? [];
   const query = bucket?.query ?? '';
+
+  useEffect(() => {
+    setSelectedPath(null);
+  }, [sessionId]);
 
   useEffect(() => {
     // `cancelled` guards the setState after the IPC resolves. If the user
@@ -46,7 +52,7 @@ export function FileTree({ sessionId }: FileTreeProps) {
   const virtualizer = useVirtualizer({
     count: filtered.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 22,
+    estimateSize: () => 24,
     overscan: 12,
   });
 
@@ -92,23 +98,49 @@ export function FileTree({ sessionId }: FileTreeProps) {
                   className="absolute left-0 right-0"
                   style={{ transform: `translateY(${v.start}px)`, height: v.size }}
                 >
-                  <TreeRow entry={entry} />
+                  <TreeRow
+                    entry={entry}
+                    onOpen={() => setSelectedPath(entry.path)}
+                  />
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      <FilePreviewDialog
+        sessionId={sessionId}
+        relPath={selectedPath}
+        onClose={() => setSelectedPath(null)}
+      />
     </div>
   );
 }
 
-function TreeRow({ entry }: { entry: TreeEntry }) {
+function TreeRow({ entry, onOpen }: { entry: TreeEntry; onOpen: () => void }) {
+  const isFile = entry.kind === 'file';
   return (
     <div
+      role={isFile ? 'button' : undefined}
+      tabIndex={isFile ? 0 : undefined}
+      onClick={isFile ? onOpen : undefined}
+      onKeyDown={
+        isFile
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onOpen();
+              }
+            }
+          : undefined
+      }
       className={cn(
-        'flex h-[22px] items-center gap-1.5 rounded px-2 font-mono text-[11.5px] leading-none',
-        'text-[var(--color-fg-muted)] hover:bg-white/5 hover:text-[var(--color-fg)] cursor-default',
+        'flex h-[24px] items-center gap-1.5 rounded px-2 font-mono text-[11.5px] leading-none',
+        'text-[var(--color-fg-muted)] hover:bg-white/5 hover:text-[var(--color-fg)]',
+        isFile
+          ? 'cursor-pointer focus:bg-white/5 focus:text-[var(--color-fg)] focus:outline-none'
+          : 'cursor-default',
       )}
       title={entry.path}
     >

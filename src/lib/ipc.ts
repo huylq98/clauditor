@@ -50,7 +50,7 @@ export const api = {
   listTree: (sid: B.SessionId, rel: string) =>
     invoke<B.TreeEntry[]>('tree_list', { sid, rel }),
   readFile: (sid: B.SessionId, rel: string) =>
-    invoke<B.FilePreview>('file_read', { sid, rel }),
+    invoke<B.FilePreview | null>('file_read', { sid, rel }),
   activitySnapshot: (sid: B.SessionId) =>
     invoke<B.ActivitySnapshot>('activity_snapshot', { sid }),
   pickDirectory: () => invoke<string | null>('dialog_pick_directory'),
