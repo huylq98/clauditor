@@ -52,7 +52,7 @@ export function FileTree({ sessionId }: FileTreeProps) {
   const virtualizer = useVirtualizer({
     count: filtered.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 22,
+    estimateSize: () => 24,
     overscan: 12,
   });
 
@@ -136,7 +136,7 @@ function TreeRow({ entry, onOpen }: { entry: TreeEntry; onOpen: () => void }) {
           : undefined
       }
       className={cn(
-        'flex h-[22px] items-center gap-1.5 rounded px-2 font-mono text-[11.5px] leading-none',
+        'flex h-[24px] items-center gap-1.5 rounded px-2 font-mono text-[11.5px] leading-none',
         'text-[var(--color-fg-muted)] hover:bg-white/5 hover:text-[var(--color-fg)]',
         isFile
           ? 'cursor-pointer focus:bg-white/5 focus:text-[var(--color-fg)] focus:outline-none'
