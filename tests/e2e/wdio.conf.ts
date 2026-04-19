@@ -25,6 +25,8 @@ export const config: WebdriverIO.Config = {
   mochaOpts: { ui: 'bdd', timeout: 60_000 },
   reporters: ['spec'],
   logLevel: 'warn',
+  // tauri-driver supports a single WebDriver session at a time, so serialize.
+  maxInstances: 1,
   specs: ['./suites/**/*.spec.ts'],
   exclude: process.env.CLAUDITOR_E2E_LIVE === '1'
     ? []
@@ -32,7 +34,10 @@ export const config: WebdriverIO.Config = {
   capabilities: [
     {
       'tauri:options': { application: tauriBinary } as Record<string, unknown>,
-      browserName: isWindows ? 'webview2' : 'webkit',
+      // Per tauri-driver protocol: browserName is always 'wry' (Tauri's webview
+      // abstraction); the driver routes to msedgedriver/webkit2gtk-driver
+      // internally based on the OS.
+      browserName: 'wry',
     } as WebdriverIO.Capabilities,
   ],
   // tauri-driver is a Cargo binary (a WebDriver server), not a wdio service.
