@@ -70,7 +70,7 @@ describe('TS-08 — Settings dialog', () => {
   // TC-703
   it('TC-703 reflects per-event installed/missing state', async () => {
     const fixture = readFileSync(
-      resolve(__dirname, '../fixtures/settings/partial-hooks.json'),
+      resolve(import.meta.dirname, '../fixtures/settings/partial-hooks.json'),
       'utf8',
     );
     const app = await launchApp();
@@ -98,7 +98,7 @@ describe('TS-08 — Settings dialog', () => {
   // TC-704
   it('TC-704 writes settings.json atomically (tmp → rename)', async () => {
     const fixture = readFileSync(
-      resolve(__dirname, '../fixtures/settings/partial-hooks.json'),
+      resolve(import.meta.dirname, '../fixtures/settings/partial-hooks.json'),
       'utf8',
     );
     const app = await launchApp();

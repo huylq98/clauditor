@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 import { platform } from 'node:os';
 
-const repoRoot = resolve(__dirname, '../..');
+const repoRoot = resolve(import.meta.dirname, '../..');
 const isWindows = platform() === 'win32';
 
 // `pnpm e2e:build:app` runs `tauri build --debug --no-bundle`, which puts the

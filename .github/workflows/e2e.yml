@@ -79,7 +79,7 @@ jobs:
 
       - name: npm install in tests/e2e
         working-directory: tests/e2e
-        run: npm ci || npm install --no-fund --no-audit
+        run: npm install --no-fund --no-audit
 
       - name: Run e2e suites (Linux, under xvfb)
         if: matrix.os == 'ubuntu-latest'
