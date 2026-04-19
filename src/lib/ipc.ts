@@ -59,6 +59,7 @@ export const api = {
     invoke<void>('set_preferences', { preferences }),
   readInstalledHooks: () => invoke<B.InstalledHooks>('read_installed_hooks'),
   reinstallHooks: () => invoke<void>('reinstall_hooks'),
+  listCapabilities: () => invoke<B.CapabilitiesSnapshot>('list_capabilities'),
 } as const;
 
 export const on = {

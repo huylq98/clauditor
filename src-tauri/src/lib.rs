@@ -4,6 +4,7 @@
 
 mod activity_service;
 mod app_state;
+mod capabilities;
 mod cleanup;
 mod commands;
 mod file_watcher;
@@ -182,6 +183,7 @@ pub fn run() {
                     commands::activity_snapshot,
                     commands::dialog_pick_directory,
                     commands::get_preferences,
+                    commands::list_capabilities,
                     commands::set_preferences,
                     commands::read_installed_hooks,
                     commands::reinstall_hooks,
@@ -211,6 +213,7 @@ pub fn run() {
                     commands::activity_snapshot,
                     commands::dialog_pick_directory,
                     commands::get_preferences,
+                    commands::list_capabilities,
                     commands::set_preferences,
                     commands::read_installed_hooks,
                     commands::reinstall_hooks,

@@ -126,3 +126,26 @@ export interface InstalledHooks {
   parseError: string | null;
   entries: HookEntry[];
 }
+
+export type CapabilityKind = 'skill' | 'subagent' | 'mcpserver' | 'slashcommand';
+
+export type CapabilitySource =
+  | { type: 'plugin'; marketplace: string; plugin: string; version: string }
+  | { type: 'user'; dir: string }
+  | { type: 'settings'; file: string };
+
+export interface Capability {
+  id: string;
+  kind: CapabilityKind;
+  name: string;
+  description: string;
+  whenToUse: string | null;
+  source: CapabilitySource;
+  invocation: string;
+}
+
+export interface CapabilitiesSnapshot {
+  items: Capability[];
+  scannedAt: number;
+  parseWarnings: string[];
+}

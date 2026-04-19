@@ -3,12 +3,13 @@ export type ActionId =
   | 'jump-tab-1' | 'jump-tab-2' | 'jump-tab-3' | 'jump-tab-4'
   | 'jump-tab-5' | 'jump-tab-6' | 'jump-tab-7' | 'jump-tab-8' | 'jump-tab-9'
   | 'next-tab' | 'prev-tab'
-  | 'toggle-sidebar' | 'command-palette' | 'shortcuts-cheatsheet' | 'settings';
+  | 'toggle-sidebar' | 'command-palette' | 'shortcuts-cheatsheet' | 'settings'
+  | 'browse-capabilities';
 
 export interface ActionDef {
   id: ActionId;
   label: string;
-  group: 'Sessions' | 'Navigation';
+  group: 'Sessions' | 'Navigation' | 'Capabilities';
 }
 
 export interface Chord {
@@ -39,6 +40,7 @@ export const ACTION_CATALOG: ActionDef[] = [
   { id: 'command-palette', label: 'Command palette', group: 'Navigation' },
   { id: 'shortcuts-cheatsheet', label: 'Keyboard shortcuts cheat sheet', group: 'Navigation' },
   { id: 'settings', label: 'Open settings', group: 'Navigation' },
+  { id: 'browse-capabilities', label: 'Browse capabilities', group: 'Capabilities' },
 ];
 
 export const DEFAULT_KEYMAP: Record<ActionId, string> = {
@@ -59,6 +61,7 @@ export const DEFAULT_KEYMAP: Record<ActionId, string> = {
   'command-palette': 'Ctrl+K',
   'shortcuts-cheatsheet': 'Ctrl+/',
   'settings': 'Ctrl+,',
+  'browse-capabilities': 'Ctrl+Shift+S',
 };
 
 const MOD_ORDER: Array<['ctrl' | 'meta' | 'alt' | 'shift', string]> = [
