@@ -12,10 +12,17 @@ import { makeRepo, cleanup as cleanFs } from '../helpers/fs.js';
 
 describe('TS-07 — Activity panel', () => {
   let repo: string;
-  before(() => {
+  let app: Awaited<ReturnType<typeof launchApp>>;
+
+  before(async () => {
     repo = makeRepo('empty');
+    app = await launchApp({ fakeScenarioPath: scenarios.idle().writeToTmp() });
   });
-  after(() => cleanFs(repo));
+
+  after(async () => {
+    await app.cleanup();
+    cleanFs(repo);
+  });
 
   async function newSession(): Promise<string> {
     await $(SEL.newSessionBtn).click();
@@ -31,9 +38,6 @@ describe('TS-07 — Activity panel', () => {
 
   // TC-601
   it('TC-601 aggregates 5 ordered tool-call rows', async () => {
-    const app = await launchApp({
-      fakeScenarioPath: scenarios.idle().writeToTmp(),
-    });
     await newSession();
     await postHook({ event: 'UserPromptSubmit' });
     const tools = ['Read', 'Edit', 'Bash', 'Grep', 'Glob'];
@@ -50,14 +54,10 @@ describe('TS-07 — Activity panel', () => {
       ),
     );
     expect(names).toEqual(tools);
-    await app.cleanup();
   });
 
   // TC-602
   it('TC-602 scopes activity panel to the active session only', async () => {
-    const app = await launchApp({
-      fakeScenarioPath: scenarios.idle().writeToTmp(),
-    });
     const a = await newSession();
     for (let i = 0; i < 3; i++) {
       await postHook({ event: 'PreToolUse', toolName: 'Bash' });
@@ -70,6 +70,5 @@ describe('TS-07 — Activity panel', () => {
     expect((await $$('[data-testid="activity-row"]')).length).toBe(3);
     await $(`[data-tab-id="${b}"]`).click();
     expect((await $$('[data-testid="activity-row"]')).length).toBe(1);
-    await app.cleanup();
   });
 });
