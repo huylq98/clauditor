@@ -141,6 +141,9 @@ pnpm test:ui-review       # screenshot capture, ~55s
 pnpm perf                 # latency suite against dev server
 pnpm perf:prod            # latency suite against production build
 
+pnpm e2e:build            # build packaged binary + fake-claude for e2e
+pnpm e2e                  # run tauri-driver suite (Windows/Linux)
+
 cd src-tauri
 cargo fmt --all -- --check
 cargo clippy --all-targets -- -D warnings
@@ -163,6 +166,7 @@ cargo test --all
 - **Keyboard shortcuts** attach via `window.addEventListener('keydown', handler, true)` (capture phase). xterm otherwise swallows `⌘K` / `⌘T` / `⌘B` / `⌘F` etc. when the terminal is focused.
 - **State derivations** in the UI — use primitive Zustand selectors (`s.order`, `s.byId`) + `useMemo`, never selectors that build fresh objects each call. Infinite-loop risk from React's `useSyncExternalStore`.
 - **TerminalHost** stays mounted per session for its lifetime; visibility toggles via CSS. Never unmount-then-remount on tab switch — xterm scrollback would be destroyed.
+- **Test-hooks feature** (`src-tauri/Cargo.toml`) must NEVER be enabled in release builds. CI guards this in `.github/workflows/release.yml`.
 
 ## Where to look first
 
