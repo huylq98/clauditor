@@ -31,14 +31,17 @@ export const config: WebdriverIO.Config = {
   exclude: process.env.CLAUDITOR_E2E_LIVE === '1'
     ? []
     : ['./suites/11-live-smoke.spec.ts'],
+  // tauri-driver capability shape: it does NOT want a generic browserName
+  // (the W3C matcher rejects 'wry'/'webview2'/'webkit'). Per Tauri's official
+  // WebDriver example repo, only `tauri:options.application` is required;
+  // tauri-driver auto-detects the platform and routes to msedgedriver
+  // (Windows) or webkit2gtk-driver (Linux). Cast to any to bypass wdio's
+  // type that expects browserName.
   capabilities: [
     {
-      'tauri:options': { application: tauriBinary } as Record<string, unknown>,
-      // Per tauri-driver protocol: browserName is always 'wry' (Tauri's webview
-      // abstraction); the driver routes to msedgedriver/webkit2gtk-driver
-      // internally based on the OS.
-      browserName: 'wry',
-    } as WebdriverIO.Capabilities,
+      'tauri:options': { application: tauriBinary },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any,
   ],
   // tauri-driver is a Cargo binary (a WebDriver server), not a wdio service.
   // Spawn it ourselves; wdio connects to it on port 4444 via standard WebDriver.
