@@ -37,7 +37,7 @@
     "@radix-ui/react-slot": "^1.1.2",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.1.8",
-    "@tanstack/react-virtual": "^3.13.25",
+    "@tanstack/react-virtual": "^3.14.1",
     "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-updater": "^2.10.1",
@@ -55,7 +55,7 @@
     "react-dom": "^19.2.7",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
-    "zustand": "^5.0.13"
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.3",
@@ -78,8 +78,8 @@
     "jsdom": "^25.0.1",
     "tailwindcss": "^4.3.0",
     "typescript": "~6.0.2",
-    "typescript-eslint": "^8.59.4",
-    "vite": "^8.0.14",
+    "typescript-eslint": "^8.60.1",
+    "vite": "^8.0.16",
     "vitest": "^2.1.9",
     "cross-env": "^7.0.3"
   }
