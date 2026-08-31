@@ -1,0 +1,52 @@
+name: e2e-live
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 9 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    if: ${{ github.repository_owner == 'huylq98' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install Windows WebView2 driver + tauri-driver
+        run: |
+          choco install -y selenium-edge-driver
+          cargo install tauri-driver --locked
+
+      - name: Install real claude CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm e2e:build
+
+      - working-directory: tests/e2e
+        run: npm ci || npm install --no-fund --no-audit
+
+      - name: Run live smoke
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDITOR_E2E_LIVE: '1'
+        run: pnpm e2e:live

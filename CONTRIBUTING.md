@@ -68,6 +68,21 @@ Every PR must leave `frontend`, `backend (*)`, and `ci-gate` green. The perf job
 3. CI runs automatically. Wait for green on the required checks.
 4. A reviewer (currently @huylq98) will take a look. For Dependabot PRs, patch/minor bumps auto-merge once green.
 
+## End-to-end tests
+
+The `tests/e2e/` suite drives the packaged Tauri binary via [tauri-driver](https://github.com/tauri-apps/tauri/tree/dev/tooling/webdriver) / WebDriver.
+
+```sh
+pnpm e2e:build               # builds fake-claude + clauditor with --features test-hooks
+pnpm e2e                     # runs all suites except the gated live one
+pnpm e2e:visual:update       # regenerate visual baselines after intentional UI change
+ANTHROPIC_API_KEY=sk-... CLAUDITOR_E2E_LIVE=1 pnpm e2e:live
+```
+
+Visual baselines live under `tests/e2e/visual/baseline/<platform>/`. After updating, **review every PNG** before committing.
+
+CI runs the suite on Windows + Linux (see `.github/workflows/e2e.yml`); the nightly `e2e-live.yml` runs the real-CLI smoke gated on `ANTHROPIC_API_KEY`.
+
 ## Anything else
 
 - Security issues — see [`SECURITY.md`](./SECURITY.md).
