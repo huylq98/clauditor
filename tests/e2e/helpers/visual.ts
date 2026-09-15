@@ -6,10 +6,10 @@ import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 import ssim from 'ssim.js';
 
-const root = resolve(__dirname, '..');
+const root = resolve(import.meta.dirname, '..');
 const platformDir = platform() === 'win32' ? 'windows' : 'linux';
 const baseDir = join(root, 'visual/baseline', platformDir);
-const artifactDir = resolve(__dirname, '../../artifacts/visual');
+const artifactDir = resolve(import.meta.dirname, '../../artifacts/visual');
 
 export interface VisualResult { ssim: number; pixelDiffRatio: number; pass: boolean; }
 
