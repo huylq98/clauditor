@@ -1,0 +1,113 @@
+name: e2e
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'tests/e2e/**'
+      - '.github/workflows/e2e.yml'
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * *'
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            src-tauri
+            src-tauri/test-fixtures/fake-claude
+
+      - name: Install Linux WebKit driver + system deps
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            webkit2gtk-driver \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            xvfb
+
+      - name: Install Windows WebView2 driver
+        if: matrix.os == 'windows-latest'
+        run: choco install -y selenium-edge-driver
+
+      - name: Install tauri-driver
+        run: cargo install tauri-driver --locked
+
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build fake-claude
+        run: pnpm e2e:build:fake
+
+      - name: Build clauditor (test-hooks)
+        run: pnpm e2e:build:app
+
+      - name: Cache tests/e2e node_modules
+        id: e2e-cache
+        uses: actions/cache@v4
+        with:
+          path: tests/e2e/node_modules
+          key: e2e-node-${{ runner.os }}-${{ hashFiles('tests/e2e/package.json') }}
+
+      - name: npm install in tests/e2e
+        if: steps.e2e-cache.outputs.cache-hit != 'true'
+        working-directory: tests/e2e
+        run: npm install --no-fund --no-audit
+
+      - name: Run e2e suites (Linux, under xvfb)
+        if: matrix.os == 'ubuntu-latest'
+        run: xvfb-run --auto-servernum pnpm e2e
+        env:
+          CI: '1'
+
+      - name: Run e2e suites (Windows)
+        if: matrix.os == 'windows-latest'
+        run: pnpm e2e
+        env:
+          CI: '1'
+
+      - name: Upload artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts-${{ matrix.os }}
+          path: |
+            tests/artifacts/**
+            tests/e2e/visual/baseline/**
+          if-no-files-found: ignore
+          retention-days: 7
